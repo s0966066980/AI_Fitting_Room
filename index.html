@@ -3,406 +3,616 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI 隨身試衣間</title>
-    
-    <!-- 引入 Tailwind CSS 快速樣式 -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 Vue.js 3 -->
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <!-- 引入 Fabric.js 用於圖片操作 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
-    <!-- 引入圖標庫 -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
+    <title>個人資產管理 APP</title>
     <style>
-        body { touch-action: manipulation; background-color: #f3f4f6; }
-        .canvas-container { margin: 0 auto; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        .tab-active { color: #2563eb; border-bottom: 2px solid #2563eb; }
-        .tab-inactive { color: #6b7280; }
-        [v-cloak] { display: none; }
+        :root {
+            --primary: #4F46E5;
+            --bg: #F3F4F6;
+            --card-bg: #FFFFFF;
+            --text-main: #1F2937;
+            --text-sub: #6B7280;
+            --danger: #EF4444;
+            --success: #10B981;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 0;
+            color: var(--text-main);
+            padding-bottom: 80px; /* Space for FAB */
+        }
+
+        /* Header */
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        h1 { margin: 0; font-size: 1.25rem; }
+        
+        .icon-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        /* Dashboard Cards */
+        .dashboard {
+            padding: 1rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .card.full-width {
+            grid-column: span 2;
+            background: linear-gradient(135deg, #4F46E5, #818CF8);
+            color: white;
+        }
+
+        .card-title { font-size: 0.875rem; color: var(--text-sub); margin-bottom: 0.5rem; }
+        .full-width .card-title { color: rgba(255,255,255,0.8); }
+        .card-value { font-size: 1.5rem; font-weight: bold; }
+
+        /* List Section */
+        .list-section { padding: 0 1rem; }
+        .section-header { font-size: 1rem; font-weight: bold; margin: 1rem 0 0.5rem 0; color: var(--text-sub); }
+        
+        .asset-item {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .asset-info h4 { margin: 0; font-size: 1rem; }
+        .asset-info p { margin: 4px 0 0 0; font-size: 0.85rem; color: var(--text-sub); }
+        .asset-amount { text-align: right; font-weight: bold; }
+        .asset-sub { font-size: 0.8rem; display: block; }
+        .color-green { color: var(--success); }
+        .color-red { color: var(--danger); }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: var(--text-sub);
+            margin-left: 10px;
+            font-size: 1.2rem;
+        }
+
+        /* Floating Action Button */
+        .fab {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background-color: var(--primary);
+            color: white;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            border: none;
+            cursor: pointer;
+            z-index: 200;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 300;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 400px;
+            border-radius: 12px;
+            padding: 1.5rem;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header { font-size: 1.25rem; font-weight: bold; margin-bottom: 1rem; }
+        
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-sub); }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #D1D5DB;
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        .btn-group { display: flex; gap: 0.5rem; margin-top: 1.5rem; }
+        .btn { flex: 1; padding: 0.75rem; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-secondary { background: #E5E7EB; color: var(--text-main); }
+
+        /* Filter Toggle in Modal */
+        .filter-option {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem;
+            border-bottom: 1px solid #eee;
+        }
     </style>
 </head>
 <body>
 
-<div id="app" v-cloak class="flex flex-col h-screen max-w-md mx-auto bg-white shadow-xl overflow-hidden">
-    
-    <!-- 頂部導航 -->
-    <header class="bg-white p-4 text-center border-b z-10">
-        <h1 class="text-xl font-bold text-gray-800">隨身試衣間 Web</h1>
-    </header>
+<header>
+    <div id="pageTitle">我的資產</div>
+    <button class="icon-btn" onclick="openFilterModal()">⚙️</button>
+</header>
 
-    <!-- 主要內容區 -->
-    <main class="flex-1 overflow-y-auto p-4 relative">
+<div class="dashboard" id="dashboard">
+    <!-- Cards will be injected by JS -->
+</div>
+
+<div class="list-section" id="listSection">
+    <!-- List items will be injected by JS -->
+</div>
+
+<button class="fab" onclick="openAddModal()">+</button>
+
+<!-- Add Asset Modal -->
+<div id="addModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">新增資產/負債</div>
         
-        <!-- 1. 設定頁面 (如果沒有基礎身體) -->
-        <div v-if="currentTab === 'profile'" class="space-y-6 text-center">
-            <h2 class="text-lg font-semibold">設定您的基礎模型</h2>
-            
-            <div class="relative w-full h-80 bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300 overflow-hidden">
-                <img v-if="bodyImageSrc" :src="bodyImageSrc" class="w-full h-full object-contain">
-                <div v-else class="text-gray-400">
-                    <i class="fas fa-user text-6xl mb-2"></i>
-                    <p>請上傳全身照</p>
-                </div>
-                
-                <!-- 隱藏的檔案輸入 -->
-                <input type="file" ref="bodyInput" @change="handleBodyUpload" accept="image/*" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer">
-            </div>
-
-            <p class="text-sm text-gray-500">提示：請穿著合身衣物，正面站立。<br>設定後可隨時更換。</p>
-            
-            <button @click="saveProfile" :disabled="!bodyImageSrc" 
-                class="w-full py-3 bg-blue-600 text-white rounded-lg font-bold disabled:bg-gray-300">
-                保存設定
-            </button>
+        <div class="form-group">
+            <label>類別</label>
+            <select id="assetCategory" onchange="updateFormFields()">
+                <option value="fund">資金 (Cash)</option>
+                <option value="stock">股票 (Stock)</option>
+                <option value="liability">負債 (Liability)</option>
+            </select>
         </div>
 
-        <!-- 2. 試衣頁面 -->
-        <div v-show="currentTab === 'tryon'" class="flex flex-col h-full">
-            <div v-if="!bodyImageSrc" class="text-center mt-10">
-                <p class="text-red-500 mb-4">尚未設定人物模型</p>
-                <button @click="currentTab = 'profile'" class="text-blue-600 underline">前往設定</button>
+        <!-- Dynamic Fields -->
+        <div id="fundFields">
+            <div class="form-group">
+                <label>幣別</label>
+                <select id="fundCurrency">
+                    <option value="TWD">台幣 (TWD)</option>
+                    <option value="USD">美金 (USD)</option>
+                    <option value="JPY">日幣 (JPY)</option>
+                </select>
             </div>
-
-            <div v-else class="flex flex-col h-full">
-                <!-- 畫布區域 -->
-                <div class="relative flex-1 bg-gray-200 rounded-lg flex justify-center items-center overflow-hidden mb-4 border border-gray-300">
-                    <canvas id="c"></canvas>
-                    
-                    <!-- 提示層 -->
-                    <div v-if="!hasCloth" class="absolute pointer-events-none text-gray-400 text-sm bg-white/80 px-2 py-1 rounded">
-                        上傳衣服後，可用手指縮放、旋轉
-                    </div>
-                </div>
-
-                <!-- 控制按鈕 -->
-                <div class="grid grid-cols-3 gap-3 mb-4">
-                    <!-- 上傳衣服 -->
-                    <label class="flex flex-col items-center justify-center p-3 bg-blue-50 text-blue-600 rounded-lg cursor-pointer active:bg-blue-100">
-                        <i class="fas fa-tshirt text-xl mb-1"></i>
-                        <span class="text-xs font-bold">加衣服</span>
-                        <input type="file" @change="handleAddCloth" accept="image/*" class="hidden">
-                    </label>
-
-                    <!-- 清除衣服 -->
-                    <button @click="clearClothes" class="flex flex-col items-center justify-center p-3 bg-red-50 text-red-600 rounded-lg active:bg-red-100">
-                        <i class="fas fa-trash text-xl mb-1"></i>
-                        <span class="text-xs font-bold">清除衣物</span>
-                    </button>
-
-                    <!-- 保存結果 -->
-                    <button @click="saveResult" class="flex flex-col items-center justify-center p-3 bg-green-50 text-green-600 rounded-lg active:bg-green-100">
-                        <i class="fas fa-camera text-xl mb-1"></i>
-                        <span class="text-xs font-bold">保存搭配</span>
-                    </button>
-                </div>
-                
-                <!-- 圖層控制 (簡單版) -->
-                <div class="flex justify-between items-center bg-gray-50 p-2 rounded text-xs text-gray-500">
-                    <span>選中衣物操作：</span>
-                    <div>
-                        <button @click="moveLayer('up')" class="px-2 py-1 bg-white border rounded mr-1">上移</button>
-                        <button @click="moveLayer('down')" class="px-2 py-1 bg-white border rounded">下移</button>
-                    </div>
-                </div>
+            <div class="form-group">
+                <label>金額</label>
+                <input type="number" id="fundAmount" placeholder="輸入金額">
+            </div>
+            <div class="form-group">
+                <label>描述</label>
+                <input type="text" id="fundDesc" placeholder="例如：銀行存款、錢包">
             </div>
         </div>
 
-        <!-- 3. 歷史紀錄頁面 -->
-        <div v-if="currentTab === 'history'" class="space-y-4">
-            <div v-if="history.length === 0" class="text-center text-gray-400 mt-10">
-                <i class="fas fa-history text-4xl mb-2"></i>
-                <p>尚無試穿紀錄</p>
+        <div id="stockFields" style="display:none;">
+            <div class="form-group">
+                <label>市場</label>
+                <select id="stockMarket">
+                    <option value="TW">台股</option>
+                    <option value="US">美股</option>
+                </select>
             </div>
-            
-            <div v-for="(item, index) in history" :key="index" class="bg-white border rounded-lg overflow-hidden shadow-sm relative">
-                <img :src="item.image" class="w-full h-64 object-cover object-top">
-                <div class="p-3 flex justify-between items-center">
-                    <span class="text-sm text-gray-500">{{ item.date }}</span>
-                    <button @click="deleteHistory(index)" class="text-red-500 text-sm">刪除</button>
+            <div class="form-group">
+                <label>代號/關鍵字查詢 (模擬)</label>
+                <div style="display:flex; gap:5px;">
+                    <input type="text" id="stockSymbol" placeholder="如: 2330 或 AAPL">
+                    <button type="button" class="btn-secondary" style="flex:0 0 60px;" onclick="searchStock()">查詢</button>
                 </div>
+                <small style="color:var(--text-sub)">*輸入後點查詢自動帶入現價</small>
+            </div>
+            <div class="form-group">
+                <label>目前股價 (單股)</label>
+                <input type="number" id="stockCurrentPrice" placeholder="自動帶入或手動輸入">
+            </div>
+            <div class="form-group">
+                <label>成本價 (單股)</label>
+                <input type="number" id="stockCost" placeholder="輸入買入成本">
+            </div>
+            <div class="form-group">
+                <label>股數</label>
+                <input type="number" id="stockQty" placeholder="持有數量">
             </div>
         </div>
 
-    </main>
+        <div id="liabilityFields" style="display:none;">
+            <div class="form-group">
+                <label>貸款類型</label>
+                <select id="liabilityType">
+                    <option value="信貸">信貸</option>
+                    <option value="車貸">車貸</option>
+                    <option value="房貸">房貸</option>
+                    <option value="學貸">學貸</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>剩餘金額</label>
+                <input type="number" id="liabilityAmount" placeholder="輸入欠款金額">
+            </div>
+        </div>
 
-    <!-- 底部 Tab Bar -->
-    <nav class="bg-white border-t flex justify-around py-3 pb-safe">
-        <button @click="currentTab = 'tryon'" :class="currentTab === 'tryon' ? 'tab-active' : 'tab-inactive'" class="flex flex-col items-center w-1/3">
-            <i class="fas fa-magic text-xl mb-1"></i>
-            <span class="text-xs">試衣</span>
-        </button>
-        <button @click="currentTab = 'history'" :class="currentTab === 'history' ? 'tab-active' : 'tab-inactive'" class="flex flex-col items-center w-1/3">
-            <i class="fas fa-clock text-xl mb-1"></i>
-            <span class="text-xs">紀錄</span>
-        </button>
-        <button @click="currentTab = 'profile'" :class="currentTab === 'profile' ? 'tab-active' : 'tab-inactive'" class="flex flex-col items-center w-1/3">
-            <i class="fas fa-user-circle text-xl mb-1"></i>
-            <span class="text-xs">設定</span>
-        </button>
-    </nav>
+        <div class="btn-group">
+            <button class="btn btn-secondary" onclick="closeModal('addModal')">取消</button>
+            <button class="btn btn-primary" onclick="saveAsset()">新增</button>
+        </div>
+    </div>
+</div>
 
+<!-- Filter Modal -->
+<div id="filterModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">顯示設定</div>
+        <p style="font-size:0.9rem; color:var(--text-sub); margin-top:-10px; margin-bottom:15px;">勾選要在首頁顯示的項目</p>
+        
+        <div class="filter-option">
+            <span>全部資產 (淨值)</span>
+            <input type="checkbox" id="showTotal" checked onchange="saveSettings()">
+        </div>
+        <div class="filter-option">
+            <span>現金資產</span>
+            <input type="checkbox" id="showCash" checked onchange="saveSettings()">
+        </div>
+        <div class="filter-option">
+            <span>股票資產</span>
+            <input type="checkbox" id="showStock" checked onchange="saveSettings()">
+        </div>
+        <div class="filter-option">
+            <span>累積負債</span>
+            <input type="checkbox" id="showDebt" checked onchange="saveSettings()">
+        </div>
+
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="closeModal('filterModal')">確定</button>
+        </div>
+    </div>
 </div>
 
 <script>
-    const { createApp, ref, onMounted, nextTick, watch } = Vue;
+    // --- Data & State ---
+    let assets = JSON.parse(localStorage.getItem('myAssets')) || [];
+    let settings = JSON.parse(localStorage.getItem('mySettings')) || {
+        showTotal: true,
+        showCash: true,
+        showStock: true,
+        showDebt: true
+    };
 
-    createApp({
-        setup() {
-            const currentTab = ref('profile'); // 預設頁面
-            const bodyImageSrc = ref(null);
-            const history = ref([]);
-            const canvas = ref(null);
-            const hasCloth = ref(false);
+    // Exchange Rates (Approximate for demo)
+    const RATES = {
+        USD: 31.5,
+        JPY: 0.22,
+        TWD: 1
+    };
 
-            // 初始化
-            onMounted(() => {
-                // 讀取 LocalStorage
-                const savedBody = localStorage.getItem('vton_body_image');
-                if (savedBody) {
-                    bodyImageSrc.value = savedBody;
-                    currentTab.value = 'tryon'; // 有設定就直接去試衣
-                }
-                
-                const savedHistory = localStorage.getItem('vton_history');
-                if (savedHistory) {
-                    history.value = JSON.parse(savedHistory);
-                }
+    // --- Initialization ---
+    document.addEventListener('DOMContentLoaded', () => {
+        loadSettings();
+        render();
+    });
 
-                initCanvas();
-            });
+    // --- Core Logic ---
 
-            // 監聽 Tab 切換，如果是試衣頁面，重新調整 Canvas
-            watch(currentTab, (newTab) => {
-                if (newTab === 'tryon') {
-                    nextTick(() => {
-                        initCanvas();
-                        if (bodyImageSrc.value) {
-                            setCanvasBackground(bodyImageSrc.value);
-                        }
-                    });
-                }
-            });
+    function saveAsset() {
+        const category = document.getElementById('assetCategory').value;
+        let newAsset = {
+            id: Date.now(),
+            category: category,
+            timestamp: new Date().toISOString()
+        };
 
-            // 初始化 Fabric Canvas
-            const initCanvas = () => {
-                const canvasEl = document.getElementById('c');
-                if (!canvasEl) return;
-                
-                // 避免重複初始化
-                if (canvas.value) {
-                    canvas.value.clear();
-                    // 重新設置背景
-                    if (bodyImageSrc.value) setCanvasBackground(bodyImageSrc.value);
-                    return;
-                }
+        if (category === 'fund') {
+            const curr = document.getElementById('fundCurrency').value;
+            const amt = parseFloat(document.getElementById('fundAmount').value);
+            const desc = document.getElementById('fundDesc').value;
+            if (!amt) return alert('請輸入金額');
+            
+            newAsset.currency = curr;
+            newAsset.amount = amt;
+            newAsset.desc = desc || curr + ' 資金';
+            
+        } else if (category === 'stock') {
+            const market = document.getElementById('stockMarket').value;
+            const symbol = document.getElementById('stockSymbol').value.toUpperCase();
+            const current = parseFloat(document.getElementById('stockCurrentPrice').value);
+            const cost = parseFloat(document.getElementById('stockCost').value);
+            const qty = parseFloat(document.getElementById('stockQty').value);
 
-                // 計算父容器寬度
-                const parentWidth = canvasEl.parentElement.offsetWidth;
-                const height = window.innerHeight * 0.55; // 佔據螢幕高度的 55%
+            if (!symbol || isNaN(current) || isNaN(cost) || isNaN(qty)) return alert('請完整輸入股票資訊');
 
-                canvas.value = new fabric.Canvas('c', {
-                    width: parentWidth,
-                    height: height,
-                    preserveObjectStacking: true // 保持選中物體層級
-                });
-            };
+            newAsset.market = market;
+            newAsset.symbol = symbol;
+            newAsset.currentPrice = current;
+            newAsset.cost = cost;
+            newAsset.qty = qty;
+            newAsset.desc = `${market} - ${symbol}`;
 
-            // 設定人物背景
-            const setCanvasBackground = (imgSrc) => {
-                if (!canvas.value) return;
-                
-                fabric.Image.fromURL(imgSrc, (img) => {
-                    // 調整背景圖以適應 Canvas (contain 模式)
-                    const canvasAspect = canvas.value.width / canvas.value.height;
-                    const imgAspect = img.width / img.height;
-                    
-                    let scaleFactor;
-                    if (imgAspect > canvasAspect) {
-                        scaleFactor = canvas.value.width / img.width;
-                    } else {
-                        scaleFactor = canvas.value.height / img.height;
-                    }
+        } else if (category === 'liability') {
+            const type = document.getElementById('liabilityType').value;
+            const amt = parseFloat(document.getElementById('liabilityAmount').value);
+            if (!amt) return alert('請輸入金額');
 
-                    img.set({
-                        originX: 'center',
-                        originY: 'center',
-                        scaleX: scaleFactor,
-                        scaleY: scaleFactor
-                    });
-
-                    canvas.value.setBackgroundImage(img, canvas.value.renderAll.bind(canvas.value), {
-                        top: canvas.value.height / 2,
-                        left: canvas.value.width / 2
-                    });
-                }, { crossOrigin: 'anonymous' });
-            };
-
-            // 上傳/更換身體圖片
-            const handleBodyUpload = (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    // 壓縮圖片以避免 LocalStorage 爆掉
-                    compressImage(event.target.result, 800, (compressedSrc) => {
-                        bodyImageSrc.value = compressedSrc;
-                    });
-                };
-                reader.readAsDataURL(file);
-            };
-
-            // 保存個人設定
-            const saveProfile = () => {
-                if (bodyImageSrc.value) {
-                    try {
-                        localStorage.setItem('vton_body_image', bodyImageSrc.value);
-                        alert('設定已保存！以後不需要重新上傳。');
-                        currentTab.value = 'tryon';
-                    } catch (e) {
-                        alert('圖片過大，儲存失敗。請嘗試使用較小的圖片。');
-                    }
-                }
-            };
-
-            // 添加衣服
-            const handleAddCloth = (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    fabric.Image.fromURL(event.target.result, (img) => {
-                        // 預設縮放衣服大小
-                        img.scaleToWidth(canvas.value.width * 0.5);
-                        
-                        img.set({
-                            left: canvas.value.width / 2,
-                            top: canvas.value.height / 2,
-                            originX: 'center',
-                            originY: 'center',
-                            cornerColor: 'blue',
-                            cornerStyle: 'circle',
-                            borderColor: 'blue',
-                            transparentCorners: false
-                        });
-
-                        canvas.value.add(img);
-                        canvas.value.setActiveObject(img);
-                        hasCloth.value = true;
-                    });
-                };
-                reader.readAsDataURL(file);
-            };
-
-            // 清除所有衣服
-            const clearClothes = () => {
-                if (!canvas.value) return;
-                canvas.value.getObjects().forEach((obj) => {
-                    canvas.value.remove(obj);
-                });
-                hasCloth.value = false;
-            };
-
-            // 圖層移動
-            const moveLayer = (direction) => {
-                const activeObj = canvas.value.getActiveObject();
-                if (!activeObj) return;
-                
-                if (direction === 'up') activeObj.bringForward();
-                else activeObj.sendBackwards();
-                
-                canvas.value.renderAll();
-            };
-
-            // 保存結果
-            const saveResult = () => {
-                if (!canvas.value) return;
-                
-                // 取消選中框以便截圖
-                canvas.value.discardActiveObject();
-                canvas.value.renderAll();
-
-                const resultDataUrl = canvas.value.toDataURL({
-                    format: 'png',
-                    quality: 0.8
-                });
-
-                // 加入歷史紀錄
-                const newRecord = {
-                    image: resultDataUrl,
-                    date: new Date().toLocaleString()
-                };
-                
-                history.value.unshift(newRecord); // 加到最前面
-                
-                // 限制歷史紀錄數量 (避免 LocalStorage 爆掉)
-                if (history.value.length > 10) {
-                    history.value.pop();
-                }
-
-                try {
-                    localStorage.setItem('vton_history', JSON.stringify(history.value));
-                    
-                    // 下載圖片到手機
-                    const link = document.createElement('a');
-                    link.download = `tryon-${Date.now()}.png`;
-                    link.href = resultDataUrl;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-
-                    alert('搭配已保存到歷史紀錄與相簿！');
-                } catch (e) {
-                    alert('儲存空間不足，請刪除部分歷史紀錄。');
-                }
-            };
-
-            // 刪除單筆紀錄
-            const deleteHistory = (index) => {
-                history.value.splice(index, 1);
-                localStorage.setItem('vton_history', JSON.stringify(history.value));
-            };
-
-            // 圖片壓縮工具函數
-            const compressImage = (src, maxWidth, callback) => {
-                const img = new Image();
-                img.src = src;
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    let width = img.width;
-                    let height = img.height;
-
-                    if (width > maxWidth) {
-                        height *= maxWidth / width;
-                        width = maxWidth;
-                    }
-
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-                    
-                    callback(canvas.toDataURL('image/jpeg', 0.7)); // 壓縮品質 0.7
-                };
-            };
-
-            return {
-                currentTab,
-                bodyImageSrc,
-                history,
-                handleBodyUpload,
-                saveProfile,
-                handleAddCloth,
-                clearClothes,
-                saveResult,
-                deleteHistory,
-                hasCloth,
-                moveLayer
-            };
+            newAsset.subType = type;
+            newAsset.amount = amt;
+            newAsset.desc = type;
         }
-    }).mount('#app');
+
+        assets.push(newAsset);
+        saveData();
+        closeModal('addModal');
+        resetForm();
+        render();
+    }
+
+    function deleteAsset(id) {
+        if(confirm('確定要刪除這筆資料嗎？')) {
+            assets = assets.filter(a => a.id !== id);
+            saveData();
+            render();
+        }
+    }
+
+    function calculateTotals() {
+        let totalCashTWD = 0;
+        let totalStockTWD = 0;
+        let totalDebtTWD = 0;
+
+        assets.forEach(a => {
+            if (a.category === 'fund') {
+                totalCashTWD += a.amount * (RATES[a.currency] || 1);
+            } else if (a.category === 'stock') {
+                // Stock Value = Current Price * Qty
+                let val = a.currentPrice * a.qty;
+                // Convert US stock to TWD for total sum
+                if (a.market === 'US') val *= RATES.USD;
+                totalStockTWD += val;
+            } else if (a.category === 'liability') {
+                totalDebtTWD += a.amount;
+            }
+        });
+
+        return {
+            cash: Math.round(totalCashTWD),
+            stock: Math.round(totalStockTWD),
+            debt: Math.round(totalDebtTWD),
+            net: Math.round(totalCashTWD + totalStockTWD - totalDebtTWD)
+        };
+    }
+
+    function render() {
+        const dashboard = document.getElementById('dashboard');
+        const listSection = document.getElementById('listSection');
+        const totals = calculateTotals();
+
+        // 1. Render Dashboard
+        let dashHTML = '';
+        if (settings.showTotal) {
+            dashHTML += `
+            <div class="card full-width">
+                <div class="card-title">全部資產 (淨值)</div>
+                <div class="card-value">NT$ ${formatNumber(totals.net)}</div>
+            </div>`;
+        }
+        if (settings.showCash) {
+            dashHTML += `
+            <div class="card">
+                <div class="card-title">現金資產</div>
+                <div class="card-value" style="color:#10B981">NT$ ${formatNumber(totals.cash)}</div>
+            </div>`;
+        }
+        if (settings.showStock) {
+            dashHTML += `
+            <div class="card">
+                <div class="card-title">股票資產</div>
+                <div class="card-value" style="color:#3B82F6">NT$ ${formatNumber(totals.stock)}</div>
+            </div>`;
+        }
+        if (settings.showDebt) {
+            dashHTML += `
+            <div class="card">
+                <div class="card-title">累積負債</div>
+                <div class="card-value" style="color:#EF4444">NT$ ${formatNumber(totals.debt)}</div>
+            </div>`;
+        }
+        dashboard.innerHTML = dashHTML;
+
+        // 2. Render List
+        let listHTML = '';
+        
+        // Group items
+        const funds = assets.filter(a => a.category === 'fund');
+        const stocks = assets.filter(a => a.category === 'stock');
+        const debts = assets.filter(a => a.category === 'liability');
+
+        if (funds.length > 0) {
+            listHTML += `<div class="section-header">資金列表</div>`;
+            funds.forEach(a => {
+                listHTML += `
+                <div class="asset-item">
+                    <div class="asset-info">
+                        <h4>${a.desc}</h4>
+                        <p>${a.currency}</p>
+                    </div>
+                    <div style="display:flex; align-items:center;">
+                        <div class="asset-amount">
+                            $${formatNumber(a.amount)}
+                        </div>
+                        <button class="delete-btn" onclick="deleteAsset(${a.id})">×</button>
+                    </div>
+                </div>`;
+            });
+        }
+
+        if (stocks.length > 0) {
+            listHTML += `<div class="section-header">股票庫存</div>`;
+            stocks.forEach(a => {
+                // Calculation: Gain = (Current - Cost) * Qty
+                const gain = (a.currentPrice - a.cost) * a.qty;
+                const totalVal = a.currentPrice * a.qty; // Market Value
+                const gainClass = gain >= 0 ? 'color-green' : 'color-red';
+                const sign = gain >= 0 ? '+' : '';
+                
+                listHTML += `
+                <div class="asset-item">
+                    <div class="asset-info">
+                        <h4>${a.symbol} (${a.market})</h4>
+                        <p>現價: ${a.currentPrice} | 成本: ${a.cost} | 股數: ${a.qty}</p>
+                    </div>
+                    <div style="display:flex; align-items:center;">
+                        <div class="asset-amount">
+                            <div>$${formatNumber(totalVal)}</div>
+                            <span class="asset-sub ${gainClass}">損益: ${sign}${formatNumber(Math.round(gain))}</span>
+                        </div>
+                        <button class="delete-btn" onclick="deleteAsset(${a.id})">×</button>
+                    </div>
+                </div>`;
+            });
+        }
+
+        if (debts.length > 0) {
+            listHTML += `<div class="section-header">負債項目</div>`;
+            debts.forEach(a => {
+                listHTML += `
+                <div class="asset-item">
+                    <div class="asset-info">
+                        <h4>${a.desc}</h4>
+                        <p>待償還</p>
+                    </div>
+                    <div style="display:flex; align-items:center;">
+                        <div class="asset-amount color-red">
+                            -$${formatNumber(a.amount)}
+                        </div>
+                        <button class="delete-btn" onclick="deleteAsset(${a.id})">×</button>
+                    </div>
+                </div>`;
+            });
+        }
+
+        listSection.innerHTML = listHTML || '<div style="text-align:center; padding:2rem; color:#aaa;">尚未新增資產</div>';
+    }
+
+    // --- Helpers & UI ---
+
+    function updateFormFields() {
+        const type = document.getElementById('assetCategory').value;
+        document.getElementById('fundFields').style.display = type === 'fund' ? 'block' : 'none';
+        document.getElementById('stockFields').style.display = type === 'stock' ? 'block' : 'none';
+        document.getElementById('liabilityFields').style.display = type === 'liability' ? 'block' : 'none';
+    }
+
+    function searchStock() {
+        const symbol = document.getElementById('stockSymbol').value.toUpperCase();
+        if(!symbol) return alert('請輸入代號');
+        
+        // Mock Data for Demo (Real API requires backend proxy usually)
+        let mockPrice = 0;
+        
+        // 簡單模擬一些數據
+        if(symbol === '2330' || symbol.includes('TSMC')) mockPrice = 585;
+        else if(symbol === '2317') mockPrice = 105;
+        else if(symbol === 'AAPL') mockPrice = 185;
+        else if(symbol === 'TSLA') mockPrice = 240;
+        else if(symbol === 'NVDA') mockPrice = 460;
+        else {
+            // Random price if unknown
+            mockPrice = Math.floor(Math.random() * 500) + 10;
+        }
+
+        document.getElementById('stockCurrentPrice').value = mockPrice;
+        alert(`已查詢 ${symbol}，模擬現價為: ${mockPrice} (實際使用需串接API)`);
+    }
+
+    function openAddModal() {
+        document.getElementById('addModal').style.display = 'flex';
+        updateFormFields();
+    }
+
+    function openFilterModal() {
+        document.getElementById('filterModal').style.display = 'flex';
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).style.display = 'none';
+    }
+
+    function resetForm() {
+        document.getElementById('fundAmount').value = '';
+        document.getElementById('fundDesc').value = '';
+        document.getElementById('stockSymbol').value = '';
+        document.getElementById('stockCurrentPrice').value = '';
+        document.getElementById('stockCost').value = '';
+        document.getElementById('stockQty').value = '';
+        document.getElementById('liabilityAmount').value = '';
+    }
+
+    function formatNumber(num) {
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+
+    function saveData() {
+        localStorage.setItem('myAssets', JSON.stringify(assets));
+    }
+
+    function saveSettings() {
+        settings.showTotal = document.getElementById('showTotal').checked;
+        settings.showCash = document.getElementById('showCash').checked;
+        settings.showStock = document.getElementById('showStock').checked;
+        settings.showDebt = document.getElementById('showDebt').checked;
+        localStorage.setItem('mySettings', JSON.stringify(settings));
+        render(); // Re-render immediately when toggled
+    }
+
+    function loadSettings() {
+        document.getElementById('showTotal').checked = settings.showTotal;
+        document.getElementById('showCash').checked = settings.showCash;
+        document.getElementById('showStock').checked = settings.showStock;
+        document.getElementById('showDebt').checked = settings.showDebt;
+    }
+
+    // Click outside to close modal
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = "none";
+        }
+    }
 </script>
+
 </body>
 </html>
