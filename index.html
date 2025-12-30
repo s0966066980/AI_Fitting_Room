@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>今天吃什麼？v5.0 (評分版)</title>
+    <title>今天吃什麼？v6.0 (專業版)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome -->
@@ -39,6 +39,22 @@
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         
+        /* Status Lights */
+        .status-dot {
+            width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px;
+        }
+        .status-open { background-color: #10B981; box-shadow: 0 0 4px #10B981; }
+        .status-closed { background-color: #EF4444; }
+
+        /* Toggle Switch */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #3B82F6;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #3B82F6;
+        }
+        
         /* Wheel Styling */
         #wheel-canvas {
             transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99); 
@@ -52,24 +68,11 @@
             transform: translateX(-50%); z-index: 20;
             filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));
         }
-        /* Google Map container in modal */
         #mini-map {
-            width: 100%;
-            height: 200px;
-            background-color: #eee;
-            border-radius: 0.5rem;
-            margin-bottom: 1rem;
+            width: 100%; height: 180px; background-color: #eee; border-radius: 0.5rem; margin-bottom: 1rem;
         }
         .photo-thumb {
             width: 80px; height: 80px; object-fit: cover; border-radius: 8px;
-        }
-        /* Star Rating in History */
-        .star-rating i {
-            cursor: pointer;
-            transition: color 0.2s;
-        }
-        .star-rating i:hover {
-            color: #F59E0B; /* Orange-400 */
         }
     </style>
 </head>
@@ -78,12 +81,12 @@
     <!-- Header -->
     <header class="bg-white shadow-sm z-10 px-4 py-3 flex justify-between items-center">
         <div class="flex items-center gap-2">
-            <button onclick="refreshSearch()" class="bg-blue-50 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center hover:bg-blue-100 transition shadow-sm" title="重新整理">
+            <button onclick="refreshSearch()" class="bg-blue-50 text-blue-600 w-9 h-9 rounded-full flex items-center justify-center hover:bg-blue-100 transition shadow-sm active:scale-90" title="重新整理與隨機推薦">
                 <i class="fa-solid fa-arrows-rotate"></i>
             </button>
             <div>
                 <h1 class="text-xl font-bold text-gray-800">今天吃什麼</h1>
-                <p class="text-xs text-gray-500">Hi 晨晨，<span id="date-display"></span></p>
+                <p class="text-xs text-gray-500">Hi Oli，<span id="date-display"></span></p>
             </div>
         </div>
         <div class="flex gap-3">
@@ -98,15 +101,30 @@
 
     <!-- Controls -->
     <div class="bg-white border-b border-gray-200 pb-2">
+        <!-- Range & Filter Row -->
         <div class="px-4 py-2" id="range-container">
-            <div class="flex justify-between text-xs text-gray-500 mb-1">
-                <span>搜尋範圍</span>
-                <span id="range-value" class="font-bold text-blue-600">500 公尺</span>
+            <div class="flex justify-between items-center mb-2">
+                <div class="flex flex-col">
+                    <span class="text-xs text-gray-500">搜尋範圍</span>
+                    <span id="range-value" class="font-bold text-blue-600 text-sm">500 公尺</span>
+                </div>
+                
+                <!-- Open Now Toggle -->
+                <div class="flex items-center">
+                    <label for="open-now-toggle" class="flex items-center cursor-pointer relative">
+                        <div class="relative">
+                            <input type="checkbox" id="open-now-toggle" class="sr-only" onchange="toggleOpenNow()">
+                            <div class="block bg-gray-200 w-10 h-6 rounded-full toggle-bg transition"></div>
+                            <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition transform" id="toggle-dot"></div>
+                        </div>
+                        <div class="ml-2 text-xs font-bold text-gray-600">只顯示營業中</div>
+                    </label>
+                </div>
             </div>
-            <!-- Added onchange for auto-refresh -->
             <input type="range" id="distance-range" min="100" max="2000" step="100" value="500" class="w-full accent-blue-500">
         </div>
 
+        <!-- Mode Buttons -->
         <div class="px-4 flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-hide pb-2">
             <button onclick="setMode('restaurant')" id="btn-restaurant" class="filter-btn px-4 py-1.5 rounded-full text-sm font-medium bg-blue-500 text-white shadow-md transition">
                 附近美食
@@ -141,7 +159,7 @@
             </div>
             <div>
                 <h2 class="text-xl font-bold text-gray-800">Google 美食雷達</h2>
-                <p class="text-gray-500 mt-2 text-sm px-8">請先設定 API Key，然後找出周圍 <span id="start-range-text">500</span> 公尺內的店家</p>
+                <p class="text-gray-500 mt-2 text-sm px-8">請先設定 API Key，然後找出周圍 <span id="start-range-text">500</span> 公尺內的精選 20 家好店</p>
                 <p id="api-status" class="text-xs text-red-500 mt-2 font-bold hidden">尚未設定 API Key</p>
             </div>
             <button onclick="getLocation()" class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold py-3 px-10 rounded-xl shadow-lg transform transition hover:scale-105 active:scale-95 flex items-center text-lg">
@@ -153,11 +171,12 @@
         <div id="loading-screen" class="hidden flex flex-col items-center justify-center h-full pt-20">
             <div class="loader mb-4"></div>
             <p class="text-gray-600 font-medium">Google 正在幫你掃描...</p>
-            <p class="text-gray-400 text-xs mt-2">正在計算距離與讀取照片</p>
+            <p class="text-gray-400 text-xs mt-2">隨機挑選 20 家好店中</p>
         </div>
 
         <!-- Results -->
         <div id="results-list" class="hidden pb-24 space-y-3"></div>
+
     </main>
 
     <!-- FAB (Dice) -->
@@ -180,18 +199,26 @@
         <button onclick="closeWheel()" class="mt-8 text-gray-400 text-sm hover:text-white underline">取消</button>
     </div>
 
-    <!-- Result Modal (With Map) -->
+    <!-- Result Modal (With Map & Hours) -->
     <div id="modal" class="fixed inset-0 bg-black bg-opacity-60 z-[60] hidden flex items-center justify-center p-4 transition-opacity duration-300">
         <div class="bg-white rounded-2xl w-full max-w-sm p-5 shadow-2xl transform transition-all scale-95 opacity-0 flex flex-col max-h-[90vh]" id="modal-content">
-            <div class="relative flex-1 overflow-y-auto">
+            <div class="relative flex-1 overflow-y-auto scrollbar-hide">
                 <button onclick="closeModal()" class="absolute top-0 right-0 text-gray-400 p-2 z-10 bg-white rounded-full"><i class="fa-solid fa-xmark text-xl"></i></button>
                 
                 <h2 id="modal-shop-name" class="text-xl font-black text-gray-800 mb-1 pr-8 leading-tight">店家名稱</h2>
                 
-                <div class="flex items-center gap-2 mb-3">
+                <div class="flex items-center gap-2 mb-2">
                     <span id="modal-shop-rating" class="text-orange-500 font-bold text-sm"><i class="fa-solid fa-star"></i> 4.5</span>
+                    <span id="modal-shop-status" class="text-xs font-bold px-2 py-0.5 rounded border"></span>
                     <span id="modal-shop-dist" class="text-blue-600 text-xs font-bold bg-blue-50 px-2 py-0.5 rounded"></span>
                 </div>
+                
+                <!-- Detailed Opening Hours Area -->
+                <div id="modal-hours-container" class="mb-3 p-3 bg-gray-50 rounded-lg text-sm text-gray-600 hidden">
+                    <div class="font-bold mb-1 flex items-center"><i class="fa-regular fa-clock mr-2"></i> 今日營業時間</div>
+                    <div id="modal-hours-text" class="pl-6">載入中...</div>
+                </div>
+
                 <p id="modal-shop-vicinity" class="text-xs text-gray-500 mb-3 truncate">地址資訊</p>
 
                 <!-- Google Map in Modal -->
@@ -230,14 +257,16 @@
 
     <script>
         // --- Global Variables ---
-        let map; // Google Map Instance
+        let map; 
         let placesService;
         let currentUserLocation = null;
-        let shopsData = []; 
+        let allFetchedShops = []; // Raw results
+        let displayedShops = []; // Filtered & Sliced (20)
         let currentMode = 'restaurant'; 
         let currentCustomKeyword = '';
         let selectedShop = null;
         let currentRadius = 500;
+        let onlyOpenNow = false;
         let historyData = JSON.parse(localStorage.getItem('foodHistory')) || [];
         let apiKey = localStorage.getItem('googleMapsApiKey') || '';
         let scriptLoaded = false;
@@ -255,6 +284,8 @@
         const rangeValue = document.getElementById('range-value');
         const keywordBadge = document.getElementById('keyword-badge');
         const distanceRange = document.getElementById('distance-range');
+        const toggleDot = document.getElementById('toggle-dot');
+        const toggleCheckbox = document.getElementById('open-now-toggle');
         
         // --- Initialization ---
         document.getElementById('date-display').innerText = new Date().toLocaleDateString('zh-TW', { month: 'long', day: 'numeric', weekday: 'short' });
@@ -265,13 +296,38 @@
             loadGoogleMapsScript();
         }
 
+        // --- Toggle Logic ---
+        function toggleOpenNow() {
+            onlyOpenNow = toggleCheckbox.checked;
+            
+            // Animation for toggle
+            if (onlyOpenNow) {
+                toggleDot.classList.add('translate-x-4');
+                document.querySelector('.toggle-bg').classList.remove('bg-gray-200');
+                document.querySelector('.toggle-bg').classList.add('bg-blue-500');
+            } else {
+                toggleDot.classList.remove('translate-x-4');
+                document.querySelector('.toggle-bg').classList.add('bg-gray-200');
+                document.querySelector('.toggle-bg').classList.remove('bg-blue-500');
+            }
+
+            if (currentUserLocation) {
+                // If we have data, just re-process and render, no need to re-fetch API to save quota
+                if (allFetchedShops.length > 0) {
+                    processAndRenderShops();
+                } else {
+                    fetchShops();
+                }
+            }
+        }
+
         // --- API Key Management ---
         async function openApiKeySettings() {
             const { value: key } = await Swal.fire({
                 title: '設定 Google Maps API Key',
                 input: 'text',
                 inputValue: apiKey,
-                inputLabel: '請輸入您的 API Key',
+                inputLabel: '需啟用 Maps JS & Places API',
                 showCancelButton: true,
                 confirmButtonText: '儲存並載入'
             });
@@ -286,7 +342,6 @@
         function loadGoogleMapsScript() {
             if (scriptLoaded) return;
             const script = document.createElement('script');
-            // Added libraries=places
             script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&language=zh-TW`;
             script.async = true;
             script.defer = true;
@@ -302,20 +357,15 @@
         }
 
         // --- Event Listeners ---
-        // 1. Display text update while dragging
         distanceRange.addEventListener('input', (e) => {
             currentRadius = e.target.value;
             rangeValue.innerText = currentRadius >= 1000 ? (currentRadius/1000) + " 公里" : currentRadius + " 公尺";
             document.getElementById('start-range-text').innerText = currentRadius;
         });
 
-        // 2. Auto refresh when drag ends (change event)
         distanceRange.addEventListener('change', (e) => {
             currentRadius = e.target.value;
-            // Only auto-refresh if we already have location/results
-            if (currentUserLocation) {
-                refreshSearch();
-            }
+            if (currentUserLocation) refreshSearch();
         });
 
         // --- Core Functions ---
@@ -323,7 +373,6 @@
             currentMode = mode;
             keywordBadge.classList.add('hidden');
             
-            // UI Reset
             document.querySelectorAll('.filter-btn').forEach(btn => {
                 btn.className = "filter-btn px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition border border-gray-200";
             });
@@ -333,12 +382,8 @@
                 activeBtn.classList.remove('bg-gray-100', 'text-gray-600');
                 activeBtn.classList.add('bg-blue-500', 'text-white', 'shadow-md', 'border-transparent');
                 
-                // Trigger search immediately if location exists
-                if (currentUserLocation) {
-                    fetchShops();
-                } else {
-                    getLocation();
-                }
+                if (currentUserLocation) refreshSearch();
+                else getLocation();
             }
         }
 
@@ -362,11 +407,10 @@
                 document.getElementById('current-keyword-text').innerText = keyword;
 
                 if (!currentUserLocation) getLocation();
-                else fetchShops();
+                else refreshSearch();
             }
         }
 
-        // Refresh Button Logic
         function refreshSearch() {
             if (!currentUserLocation) {
                 getLocation();
@@ -426,55 +470,77 @@
                 request.type = undefined; 
             }
 
+            // Fetching from Google
             placesService.nearbySearch(request, (results, status) => {
-                loadingScreen.classList.add('hidden');
                 if (status === google.maps.places.PlacesServiceStatus.OK) {
-                    // Process results to add distance
-                    shopsData = results.map(shop => {
-                        const distMeters = calculateDistance(
-                            currentUserLocation.lat, currentUserLocation.lng,
-                            shop.geometry.location.lat(), shop.geometry.location.lng()
-                        );
-                        shop.distanceVal = distMeters; // Store for sorting if needed
-                        shop.distanceText = distMeters < 1000 ? `${Math.round(distMeters)} m` : `${(distMeters/1000).toFixed(1)} km`;
-                        return shop;
-                    }).sort((a, b) => a.distanceVal - b.distanceVal); // Sort by distance nearest first
-
-                    renderShopsUI();
+                    allFetchedShops = results; // Store raw results
+                    processAndRenderShops();
                 } else {
+                    loadingScreen.classList.add('hidden');
                     resultsList.classList.remove('hidden');
                     resultsList.innerHTML = `<div class="text-center mt-10 text-gray-400">找不到相關店家 (${status})</div>`;
                 }
             });
         }
 
-        // Helper: Haversine Formula for distance
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371e3; // metres
-            const φ1 = lat1 * Math.PI/180; 
-            const φ2 = lat2 * Math.PI/180;
-            const Δφ = (lat2-lat1) * Math.PI/180;
-            const Δλ = (lon2-lon1) * Math.PI/180;
+        function processAndRenderShops() {
+            // 1. Filter Logic
+            let filtered = allFetchedShops.filter(shop => {
+                // Determine Open Status
+                // shop.opening_hours.open_now is a Boolean provided by nearbySearch
+                // If it's undefined, we assume unknown (but don't filter out unless strict)
+                
+                if (onlyOpenNow) {
+                    return shop.opening_hours && shop.opening_hours.isOpen();
+                }
+                return true;
+            });
 
-            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-                      Math.cos(φ1) * Math.cos(φ2) *
-                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            // 2. Calculation & Decoration
+            filtered = filtered.map(shop => {
+                const distMeters = calculateDistance(
+                    currentUserLocation.lat, currentUserLocation.lng,
+                    shop.geometry.location.lat(), shop.geometry.location.lng()
+                );
+                shop.distanceVal = distMeters;
+                shop.distanceText = distMeters < 1000 ? `${Math.round(distMeters)} m` : `${(distMeters/1000).toFixed(1)} km`;
+                
+                // Determine Status Text and Class
+                shop.isOpen = shop.opening_hours ? shop.opening_hours.isOpen() : null; // isOpen() is Google Maps V3 standard
+                
+                return shop;
+            });
 
-            return R * c;
+            // 3. Shuffle & Slice (Max 20)
+            // Randomize array
+            filtered.sort(() => 0.5 - Math.random());
+            // Take top 20
+            displayedShops = filtered.slice(0, 20);
+            
+            // 4. Sort displayed by distance for better UX (optional, but shuffling makes it truly random list)
+            // Let's keep them random as requested "Random recommendation"
+            
+            renderUI();
         }
 
-        function renderShopsUI() {
+        function renderUI() {
+            loadingScreen.classList.add('hidden');
             resultsList.classList.remove('hidden');
             resultsList.innerHTML = '';
             document.getElementById('fab-container').classList.remove('hidden');
 
             const infoDiv = document.createElement('div');
             infoDiv.className = "px-4 py-2 text-xs text-gray-500 flex justify-between";
-            infoDiv.innerHTML = `<span>找到 ${shopsData.length} 間店家</span> <span class="text-blue-500">Google Data</span>`;
+            let filterText = onlyOpenNow ? "(只顯示營業中)" : "";
+            infoDiv.innerHTML = `<span>隨機推薦 ${displayedShops.length} 家 ${filterText}</span> <span class="text-blue-500">Google Data</span>`;
             resultsList.appendChild(infoDiv);
 
-            shopsData.forEach(shop => {
+            if (displayedShops.length === 0) {
+                 resultsList.innerHTML += `<div class="text-center mt-10 text-gray-400">沒有符合條件的店家<br>試試看放寬搜尋範圍？</div>`;
+                 return;
+            }
+
+            displayedShops.forEach(shop => {
                 const card = document.createElement('div');
                 card.className = 'bg-white p-3 rounded-xl shadow-sm mx-4 mb-3 flex items-start gap-3 cursor-pointer card-anim border border-gray-100 hover:border-blue-300';
                 
@@ -485,17 +551,30 @@
                     photoUrl = shop.icon; 
                 }
 
-                const rating = shop.rating ? `<span class="text-orange-500 font-bold text-xs"><i class="fa-solid fa-star"></i> ${shop.rating}</span>` : '';
-                const user_ratings = shop.user_ratings_total ? `<span class="text-gray-400 text-xs">(${shop.user_ratings_total})</span>` : '';
+                // Rating
+                const rating = shop.rating ? `<span class="text-orange-500 font-bold text-xs"><i class="fa-solid fa-star"></i> ${shop.rating}</span>` : '<span class="text-gray-400 text-xs">無評分</span>';
+                
+                // Status Light
+                let statusHtml = '';
+                if (shop.isOpen === true) {
+                    statusHtml = `<span class="text-xs text-green-600 font-bold flex items-center"><span class="status-dot status-open"></span>營業中</span>`;
+                } else if (shop.isOpen === false) {
+                    statusHtml = `<span class="text-xs text-red-500 font-bold flex items-center"><span class="status-dot status-closed"></span>休息中</span>`;
+                } else {
+                    statusHtml = `<span class="text-xs text-gray-400">營業時間未知</span>`;
+                }
 
                 card.innerHTML = `
                     <img src="${photoUrl}" class="photo-thumb bg-gray-100 flex-shrink-0" onerror="this.src='https://via.placeholder.com/80?text=Food'">
                     <div class="flex-1 min-w-0 pt-1 relative">
-                        <div class="flex justify-between items-start">
-                             <h3 class="font-bold text-gray-800 truncate pr-2 text-sm mb-1">${shop.name}</h3>
+                        <div class="flex justify-between items-start mb-1">
+                             <h3 class="font-bold text-gray-800 truncate pr-2 text-sm">${shop.name}</h3>
                              <span class="text-xs font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded flex-shrink-0">${shop.distanceText}</span>
                         </div>
-                        <div class="mb-1">${rating} ${user_ratings}</div>
+                        <div class="flex items-center gap-3 mb-1">
+                            ${rating}
+                            ${statusHtml}
+                        </div>
                         <p class="text-xs text-gray-500 truncate"><i class="fa-solid fa-location-dot"></i> ${shop.vicinity || '無地址資訊'}</p>
                     </div>
                 `;
@@ -512,25 +591,49 @@
             resultsList.appendChild(spacer);
         }
 
-        // --- Modal & Map ---
+        // --- Distance Helper ---
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; 
+            const φ1 = lat1 * Math.PI/180; 
+            const φ2 = lat2 * Math.PI/180;
+            const Δφ = (lat2-lat1) * Math.PI/180;
+            const Δλ = (lon2-lon1) * Math.PI/180;
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        // --- Modal & Details ---
         function openModal() {
             if(!selectedShop) return;
             document.getElementById('modal-shop-name').innerText = selectedShop.name;
             document.getElementById('modal-shop-vicinity').innerText = selectedShop.vicinity || '';
-            document.getElementById('modal-shop-rating').innerHTML = selectedShop.rating ? `<i class="fa-solid fa-star"></i> ${selectedShop.rating}` : '';
+            document.getElementById('modal-shop-rating').innerHTML = selectedShop.rating ? `<i class="fa-solid fa-star"></i> ${selectedShop.rating} <span class="text-gray-400 text-xs">(${selectedShop.user_ratings_total || 0}則評論)</span>` : '無評分';
             document.getElementById('modal-shop-dist').innerText = selectedShop.distanceText || '';
+
+            // Status Badge in Modal
+            const statusEl = document.getElementById('modal-shop-status');
+            if (selectedShop.isOpen) {
+                statusEl.innerText = "營業中";
+                statusEl.className = "text-xs font-bold px-2 py-0.5 rounded border border-green-200 bg-green-50 text-green-600";
+            } else if (selectedShop.isOpen === false) {
+                statusEl.innerText = "休息中";
+                statusEl.className = "text-xs font-bold px-2 py-0.5 rounded border border-red-200 bg-red-50 text-red-600";
+            } else {
+                statusEl.innerText = "時間未知";
+                statusEl.className = "text-xs font-bold px-2 py-0.5 rounded border border-gray-200 bg-gray-50 text-gray-500";
+            }
+
+            // Fetch Detailed Hours
+            fetchDetailedHours(selectedShop.place_id);
 
             modal.classList.remove('hidden');
             setTimeout(() => {
                 document.getElementById('modal-content').classList.remove('scale-95', 'opacity-0');
             }, 10);
 
-            // Render Google Map
+            // Map
             const mapEl = document.getElementById('mini-map');
-            if (!selectedShop.geometry) {
-                mapEl.innerHTML = '<div class="flex items-center justify-center h-full text-gray-400 bg-gray-100">無地圖資料</div>';
-                return;
-            }
             const shopLocation = selectedShop.geometry.location;
             const miniMap = new google.maps.Map(mapEl, {
                 center: shopLocation,
@@ -545,6 +648,55 @@
             });
         }
 
+        function fetchDetailedHours(placeId) {
+            const container = document.getElementById('modal-hours-container');
+            const textEl = document.getElementById('modal-hours-text');
+            
+            container.classList.remove('hidden');
+            textEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-blue-500"></i> 讀取中...';
+
+            let req = {
+                placeId: placeId,
+                fields: ['opening_hours']
+            };
+
+            placesService.getDetails(req, (place, status) => {
+                if (status === google.maps.places.PlacesServiceStatus.OK && place.opening_hours) {
+                    // Get today's day index (0 Sunday - 6 Saturday)
+                    // Google API weekday_text usually starts with Monday or Sunday depending on locale, 
+                    // but usually it's an array of 7 strings.
+                    // We need to match today.
+                    
+                    const todayIndex = new Date().getDay(); 
+                    // Shift: Google array usually 0 is Monday? No, docs say 0 is Sunday.
+                    // weekday_text is formatted string array. We can try to find the one that matches today's day name maybe?
+                    // Actually let's just use .weekday_text array. It's usually ordered 0: Monday... wait no.
+                    // Let's use `weekday_text` which is an array of strings like "Monday: 9:00 AM – 5:00 PM"
+                    
+                    // A simpler way: Find the string that contains today's day name in Traditional Chinese
+                    const daysMap = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+                    const todayString = daysMap[todayIndex];
+                    
+                    if (place.opening_hours.weekday_text) {
+                        const todayInfo = place.opening_hours.weekday_text.find(day => day.includes(todayString));
+                        if (todayInfo) {
+                            // Split to just get the time part if possible, or show full string
+                            // usually "星期三: 11:00 – 14:00, 17:00 – 21:00"
+                            // Let's remove the day name to make it clean
+                            const timePart = todayInfo.replace(todayString, '').replace(':', '').trim();
+                            textEl.innerText = timePart || "今日營業時間未提供";
+                        } else {
+                            textEl.innerText = "無法取得今日時段";
+                        }
+                    } else {
+                        textEl.innerText = "無詳細時段資訊";
+                    }
+                } else {
+                    container.classList.add('hidden');
+                }
+            });
+        }
+
         function closeModal() {
              document.getElementById('modal-content').classList.add('scale-95', 'opacity-0');
              setTimeout(() => modal.classList.add('hidden'), 200);
@@ -553,19 +705,16 @@
         function openGoogleMapsNav() {
             if(!selectedShop) return;
             const query = encodeURIComponent(selectedShop.name);
-            let url = `https://www.google.com/maps/search/?api=1&query=${query}`;
-            if(selectedShop.geometry) {
-                url += `&query_place_id=${selectedShop.place_id}`; 
-            }
+            let url = `https://www.google.com/maps/search/?api=1&query=${query}&query_place_id=${selectedShop.place_id}`;
             window.open(url, '_blank');
         }
 
         // --- Wheel Logic ---
         function openWheel() {
-            if (shopsData.length === 0) return;
+            if (displayedShops.length === 0) return;
             document.getElementById('wheel-modal').classList.remove('hidden');
-            drawWheel(shopsData);
-            wheelCanvas.onclick = () => spinWheel(shopsData);
+            drawWheel(displayedShops);
+            wheelCanvas.onclick = () => spinWheel(displayedShops);
         }
         function closeWheel() { document.getElementById('wheel-modal').classList.add('hidden'); }
         function drawWheel(data) {
@@ -622,80 +771,48 @@
             requestAnimationFrame(animate);
         }
         
-        // --- History & Rating Logic (UPDATED) ---
+        // --- History Logic ---
         function saveToHistoryAndClose() {
             if(!selectedShop) return;
-            // Default rating 0 means not rated yet
-            historyData.unshift({ 
-                name: selectedShop.name, 
-                date: new Date().toLocaleDateString('zh-TW'),
-                userRating: 0 
-            });
+            historyData.unshift({ name: selectedShop.name, date: new Date().toLocaleDateString('zh-TW'), userRating: 0 });
             localStorage.setItem('foodHistory', JSON.stringify(historyData));
             closeModal();
-            Swal.fire({
-                icon: 'success',
-                title: '已紀錄',
-                text: '別忘了去紀錄打分數喔！',
-                timer: 1500,
-                showConfirmButton: false
-            });
+            Swal.fire({ icon: 'success', title: '已紀錄', text: '別忘了去紀錄打分數喔！', timer: 1500, showConfirmButton: false });
         }
-
         function rateHistoryItem(index, rating) {
             historyData[index].userRating = rating;
             localStorage.setItem('foodHistory', JSON.stringify(historyData));
-            openHistory(); // Re-render to show stars
+            openHistory();
         }
-
         function openHistory() {
             const list = document.getElementById('history-list');
             list.innerHTML = '';
-            
-            if(historyData.length === 0) {
-                 list.innerHTML = `<div class="text-center text-gray-400 mt-10">還沒有紀錄喔</div>`;
-            }
-
+            if(historyData.length === 0) { list.innerHTML = `<div class="text-center text-gray-400 mt-10">還沒有紀錄喔</div>`; }
             historyData.forEach((h, i) => {
-                // Generate Stars
                 let starsHtml = '';
                 for(let s=1; s<=5; s++) {
                     const colorClass = s <= h.userRating ? 'text-yellow-400' : 'text-gray-300';
                     starsHtml += `<i class="fa-solid fa-star text-lg ${colorClass} px-1" onclick="rateHistoryItem(${i}, ${s})"></i>`;
                 }
-
                 list.innerHTML += `
                     <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                         <div class="flex justify-between items-start mb-2">
-                            <div>
-                                <h3 class="font-bold text-gray-800">${h.name}</h3>
-                                <div class="text-xs text-gray-400">${h.date}</div>
-                            </div>
+                            <div><h3 class="font-bold text-gray-800">${h.name}</h3><div class="text-xs text-gray-400">${h.date}</div></div>
                             <button onclick="deleteHistoryItem(${i})" class="text-gray-300 hover:text-red-500 p-1"><i class="fa-solid fa-trash"></i></button>
                         </div>
-                        <div class="flex items-center">
-                            <span class="text-xs text-gray-500 mr-2">我的評分:</span>
-                            <div class="star-rating flex">
-                                ${starsHtml}
-                            </div>
-                        </div>
+                        <div class="flex items-center"><span class="text-xs text-gray-500 mr-2">我的評分:</span><div class="star-rating flex">${starsHtml}</div></div>
                     </div>`;
             });
             document.getElementById('history-modal').classList.remove('hidden', 'translate-y-full');
             document.getElementById('history-modal').classList.add('translate-y-0');
         }
-
-        function closeHistory() {
-             document.getElementById('history-modal').classList.add('translate-y-full');
-             setTimeout(()=>document.getElementById('history-modal').classList.add('hidden'), 300);
-        }
+        function closeHistory() { document.getElementById('history-modal').classList.add('translate-y-full'); setTimeout(()=>document.getElementById('history-modal').classList.add('hidden'), 300); }
         function deleteHistoryItem(index) { historyData.splice(index, 1); localStorage.setItem('foodHistory', JSON.stringify(historyData)); openHistory(); }
         function clearHistory() { historyData=[]; localStorage.setItem('foodHistory', '[]'); openHistory(); }
         function shareShop() {
             const text = `今天吃: ${selectedShop.name} https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedShop.name)}`;
             navigator.clipboard.writeText(text).then(()=>Swal.fire('已複製分享文字', '', 'success'));
         }
-
     </script>
 </body>
 </html>
