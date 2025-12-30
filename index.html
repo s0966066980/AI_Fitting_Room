@@ -2,617 +2,428 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>個人資產管理 APP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>今天吃什麼？</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary: #4F46E5;
-            --bg: #F3F4F6;
-            --card-bg: #FFFFFF;
-            --text-main: #1F2937;
-            --text-sub: #6B7280;
-            --danger: #EF4444;
-            --success: #10B981;
-        }
-
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg);
-            margin: 0;
-            padding: 0;
-            color: var(--text-main);
-            padding-bottom: 80px; /* Space for FAB */
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #F3F4F6;
+            -webkit-tap-highlight-color: transparent;
         }
-
-        /* Header */
-        header {
-            background-color: var(--primary);
-            color: white;
-            padding: 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        h1 { margin: 0; font-size: 1.25rem; }
-        
-        .icon-btn {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 1.5rem;
-            cursor: pointer;
-        }
-
-        /* Dashboard Cards */
-        .dashboard {
-            padding: 1rem;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-        }
-
-        .card {
-            background: var(--card-bg);
-            padding: 1rem;
-            border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-
-        .card.full-width {
-            grid-column: span 2;
-            background: linear-gradient(135deg, #4F46E5, #818CF8);
-            color: white;
-        }
-
-        .card-title { font-size: 0.875rem; color: var(--text-sub); margin-bottom: 0.5rem; }
-        .full-width .card-title { color: rgba(255,255,255,0.8); }
-        .card-value { font-size: 1.5rem; font-weight: bold; }
-
-        /* List Section */
-        .list-section { padding: 0 1rem; }
-        .section-header { font-size: 1rem; font-weight: bold; margin: 1rem 0 0.5rem 0; color: var(--text-sub); }
-        
-        .asset-item {
-            background: var(--card-bg);
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 0.75rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-        }
-
-        .asset-info h4 { margin: 0; font-size: 1rem; }
-        .asset-info p { margin: 4px 0 0 0; font-size: 0.85rem; color: var(--text-sub); }
-        .asset-amount { text-align: right; font-weight: bold; }
-        .asset-sub { font-size: 0.8rem; display: block; }
-        .color-green { color: var(--success); }
-        .color-red { color: var(--danger); }
-
-        .delete-btn {
-            background: none;
-            border: none;
-            color: var(--text-sub);
-            margin-left: 10px;
-            font-size: 1.2rem;
-        }
-
-        /* Floating Action Button */
-        .fab {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            background-color: var(--primary);
-            color: white;
-            width: 56px;
-            height: 56px;
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #F59E0B;
             border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-            border: none;
-            cursor: pointer;
-            z-index: 200;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
         }
-
-        /* Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 300;
-            align-items: center;
-            justify-content: center;
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
-
-        .modal-content {
-            background: white;
-            width: 90%;
-            max-width: 400px;
-            border-radius: 12px;
-            padding: 1.5rem;
-            max-height: 90vh;
-            overflow-y: auto;
+        .card-anim {
+            transition: transform 0.2s, box-shadow 0.2s;
         }
-
-        .modal-header { font-size: 1.25rem; font-weight: bold; margin-bottom: 1rem; }
-        
-        .form-group { margin-bottom: 1rem; }
-        .form-group label { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-sub); }
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #D1D5DB;
-            border-radius: 6px;
-            font-size: 1rem;
-            box-sizing: border-box;
-        }
-
-        .btn-group { display: flex; gap: 0.5rem; margin-top: 1.5rem; }
-        .btn { flex: 1; padding: 0.75rem; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-secondary { background: #E5E7EB; color: var(--text-main); }
-
-        /* Filter Toggle in Modal */
-        .filter-option {
-            display: flex;
-            justify-content: space-between;
-            padding: 0.75rem;
-            border-bottom: 1px solid #eee;
+        .card-anim:active {
+            transform: scale(0.98);
         }
     </style>
 </head>
-<body>
+<body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
 
-<header>
-    <div id="pageTitle">我的資產</div>
-    <button class="icon-btn" onclick="openFilterModal()">⚙️</button>
-</header>
+    <!-- Header -->
+    <header class="bg-white shadow-sm z-10 p-4 flex justify-between items-center">
+        <div>
+            <h1 class="text-xl font-bold text-gray-800"><i class="fa-solid fa-utensils text-orange-500 mr-2"></i>今天吃什麼</h1>
+            <p class="text-xs text-gray-500">Hi 晨晨，餓了嗎？</p>
+        </div>
+        <div id="status-badge" class="hidden px-2 py-1 rounded-full text-xs font-semibold bg-gray-200 text-gray-600">
+            定位中...
+        </div>
+    </header>
 
-<div class="dashboard" id="dashboard">
-    <!-- Cards will be injected by JS -->
-</div>
+    <!-- Filter / Controls -->
+    <div class="p-4 bg-white border-b border-gray-200 flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-hide">
+        <button onclick="setMode('all')" id="btn-all" class="filter-btn px-4 py-1.5 rounded-full text-sm font-medium bg-orange-500 text-white shadow-md transition">
+            全部餐廳
+        </button>
+        <button onclick="setMode('date')" id="btn-date" class="filter-btn px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
+            💕 棠棠約會模式
+        </button>
+        <button onclick="setMode('noodle')" id="btn-noodle" class="filter-btn px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
+            🍜 麵食
+        </button>
+    </div>
 
-<div class="list-section" id="listSection">
-    <!-- List items will be injected by JS -->
-</div>
-
-<button class="fab" onclick="openAddModal()">+</button>
-
-<!-- Add Asset Modal -->
-<div id="addModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">新增資產/負債</div>
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto p-4 relative" id="main-container">
         
-        <div class="form-group">
-            <label>類別</label>
-            <select id="assetCategory" onchange="updateFormFields()">
-                <option value="fund">資金 (Cash)</option>
-                <option value="stock">股票 (Stock)</option>
-                <option value="liability">負債 (Liability)</option>
-            </select>
+        <!-- Empty State / Start Screen -->
+        <div id="start-screen" class="flex flex-col items-center justify-center h-full text-center space-y-6">
+            <div class="w-32 h-32 bg-orange-100 rounded-full flex items-center justify-center animate-bounce">
+                <i class="fa-solid fa-location-dot text-5xl text-orange-500"></i>
+            </div>
+            <div>
+                <h2 class="text-xl font-bold text-gray-800">搜尋附近的美味</h2>
+                <p class="text-gray-500 mt-2 text-sm">我們會搜尋您周圍 1 公里內的店家</p>
+            </div>
+            <button onclick="getLocation()" class="bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold py-3 px-8 rounded-xl shadow-lg transform transition hover:scale-105 active:scale-95 flex items-center">
+                <i class="fa-solid fa-magnifying-glass-location mr-2"></i> 開始搜尋
+            </button>
         </div>
 
-        <!-- Dynamic Fields -->
-        <div id="fundFields">
-            <div class="form-group">
-                <label>幣別</label>
-                <select id="fundCurrency">
-                    <option value="TWD">台幣 (TWD)</option>
-                    <option value="USD">美金 (USD)</option>
-                    <option value="JPY">日幣 (JPY)</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>金額</label>
-                <input type="number" id="fundAmount" placeholder="輸入金額">
-            </div>
-            <div class="form-group">
-                <label>描述</label>
-                <input type="text" id="fundDesc" placeholder="例如：銀行存款、錢包">
-            </div>
+        <!-- Loading State -->
+        <div id="loading-screen" class="hidden flex flex-col items-center justify-center h-full">
+            <div class="loader mb-4"></div>
+            <p class="text-gray-600 font-medium">正在掃描周圍店家...</p>
+            <p class="text-gray-400 text-xs mt-2">使用 OpenStreetMap 資料庫</p>
         </div>
 
-        <div id="stockFields" style="display:none;">
-            <div class="form-group">
-                <label>市場</label>
-                <select id="stockMarket">
-                    <option value="TW">台股</option>
-                    <option value="US">美股</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>代號/關鍵字查詢 (模擬)</label>
-                <div style="display:flex; gap:5px;">
-                    <input type="text" id="stockSymbol" placeholder="如: 2330 或 AAPL">
-                    <button type="button" class="btn-secondary" style="flex:0 0 60px;" onclick="searchStock()">查詢</button>
+        <!-- Results List -->
+        <div id="results-list" class="hidden pb-20 space-y-3">
+            <!-- Items will be injected here -->
+        </div>
+
+    </main>
+
+    <!-- Floating Action Button (Random Picker) -->
+    <div id="fab-container" class="hidden absolute bottom-6 right-6 z-20">
+        <button onclick="pickRandom()" class="bg-gray-800 text-white w-16 h-16 rounded-full shadow-xl flex items-center justify-center text-2xl hover:bg-gray-700 transition transform hover:rotate-12 active:scale-90">
+            <i class="fa-solid fa-dice"></i>
+        </button>
+    </div>
+
+    <!-- Result Modal (Random Pick) -->
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl transform transition-all scale-95 opacity-0" id="modal-content">
+            <div class="text-center">
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fa-solid fa-check text-2xl text-green-600"></i>
                 </div>
-                <small style="color:var(--text-sub)">*輸入後點查詢自動帶入現價</small>
-            </div>
-            <div class="form-group">
-                <label>目前股價 (單股)</label>
-                <input type="number" id="stockCurrentPrice" placeholder="自動帶入或手動輸入">
-            </div>
-            <div class="form-group">
-                <label>成本價 (單股)</label>
-                <input type="number" id="stockCost" placeholder="輸入買入成本">
-            </div>
-            <div class="form-group">
-                <label>股數</label>
-                <input type="number" id="stockQty" placeholder="持有數量">
-            </div>
-        </div>
-
-        <div id="liabilityFields" style="display:none;">
-            <div class="form-group">
-                <label>貸款類型</label>
-                <select id="liabilityType">
-                    <option value="信貸">信貸</option>
-                    <option value="車貸">車貸</option>
-                    <option value="房貸">房貸</option>
-                    <option value="學貸">學貸</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>剩餘金額</label>
-                <input type="number" id="liabilityAmount" placeholder="輸入欠款金額">
-            </div>
-        </div>
-
-        <div class="btn-group">
-            <button class="btn btn-secondary" onclick="closeModal('addModal')">取消</button>
-            <button class="btn btn-primary" onclick="saveAsset()">新增</button>
-        </div>
-    </div>
-</div>
-
-<!-- Filter Modal -->
-<div id="filterModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">顯示設定</div>
-        <p style="font-size:0.9rem; color:var(--text-sub); margin-top:-10px; margin-bottom:15px;">勾選要在首頁顯示的項目</p>
-        
-        <div class="filter-option">
-            <span>全部資產 (淨值)</span>
-            <input type="checkbox" id="showTotal" checked onchange="saveSettings()">
-        </div>
-        <div class="filter-option">
-            <span>現金資產</span>
-            <input type="checkbox" id="showCash" checked onchange="saveSettings()">
-        </div>
-        <div class="filter-option">
-            <span>股票資產</span>
-            <input type="checkbox" id="showStock" checked onchange="saveSettings()">
-        </div>
-        <div class="filter-option">
-            <span>累積負債</span>
-            <input type="checkbox" id="showDebt" checked onchange="saveSettings()">
-        </div>
-
-        <div class="btn-group">
-            <button class="btn btn-primary" onclick="closeModal('filterModal')">確定</button>
-        </div>
-    </div>
-</div>
-
-<script>
-    // --- Data & State ---
-    let assets = JSON.parse(localStorage.getItem('myAssets')) || [];
-    let settings = JSON.parse(localStorage.getItem('mySettings')) || {
-        showTotal: true,
-        showCash: true,
-        showStock: true,
-        showDebt: true
-    };
-
-    // Exchange Rates (Approximate for demo)
-    const RATES = {
-        USD: 31.5,
-        JPY: 0.22,
-        TWD: 1
-    };
-
-    // --- Initialization ---
-    document.addEventListener('DOMContentLoaded', () => {
-        loadSettings();
-        render();
-    });
-
-    // --- Core Logic ---
-
-    function saveAsset() {
-        const category = document.getElementById('assetCategory').value;
-        let newAsset = {
-            id: Date.now(),
-            category: category,
-            timestamp: new Date().toISOString()
-        };
-
-        if (category === 'fund') {
-            const curr = document.getElementById('fundCurrency').value;
-            const amt = parseFloat(document.getElementById('fundAmount').value);
-            const desc = document.getElementById('fundDesc').value;
-            if (!amt) return alert('請輸入金額');
-            
-            newAsset.currency = curr;
-            newAsset.amount = amt;
-            newAsset.desc = desc || curr + ' 資金';
-            
-        } else if (category === 'stock') {
-            const market = document.getElementById('stockMarket').value;
-            const symbol = document.getElementById('stockSymbol').value.toUpperCase();
-            const current = parseFloat(document.getElementById('stockCurrentPrice').value);
-            const cost = parseFloat(document.getElementById('stockCost').value);
-            const qty = parseFloat(document.getElementById('stockQty').value);
-
-            if (!symbol || isNaN(current) || isNaN(cost) || isNaN(qty)) return alert('請完整輸入股票資訊');
-
-            newAsset.market = market;
-            newAsset.symbol = symbol;
-            newAsset.currentPrice = current;
-            newAsset.cost = cost;
-            newAsset.qty = qty;
-            newAsset.desc = `${market} - ${symbol}`;
-
-        } else if (category === 'liability') {
-            const type = document.getElementById('liabilityType').value;
-            const amt = parseFloat(document.getElementById('liabilityAmount').value);
-            if (!amt) return alert('請輸入金額');
-
-            newAsset.subType = type;
-            newAsset.amount = amt;
-            newAsset.desc = type;
-        }
-
-        assets.push(newAsset);
-        saveData();
-        closeModal('addModal');
-        resetForm();
-        render();
-    }
-
-    function deleteAsset(id) {
-        if(confirm('確定要刪除這筆資料嗎？')) {
-            assets = assets.filter(a => a.id !== id);
-            saveData();
-            render();
-        }
-    }
-
-    function calculateTotals() {
-        let totalCashTWD = 0;
-        let totalStockTWD = 0;
-        let totalDebtTWD = 0;
-
-        assets.forEach(a => {
-            if (a.category === 'fund') {
-                totalCashTWD += a.amount * (RATES[a.currency] || 1);
-            } else if (a.category === 'stock') {
-                // Stock Value = Current Price * Qty
-                let val = a.currentPrice * a.qty;
-                // Convert US stock to TWD for total sum
-                if (a.market === 'US') val *= RATES.USD;
-                totalStockTWD += val;
-            } else if (a.category === 'liability') {
-                totalDebtTWD += a.amount;
-            }
-        });
-
-        return {
-            cash: Math.round(totalCashTWD),
-            stock: Math.round(totalStockTWD),
-            debt: Math.round(totalDebtTWD),
-            net: Math.round(totalCashTWD + totalStockTWD - totalDebtTWD)
-        };
-    }
-
-    function render() {
-        const dashboard = document.getElementById('dashboard');
-        const listSection = document.getElementById('listSection');
-        const totals = calculateTotals();
-
-        // 1. Render Dashboard
-        let dashHTML = '';
-        if (settings.showTotal) {
-            dashHTML += `
-            <div class="card full-width">
-                <div class="card-title">全部資產 (淨值)</div>
-                <div class="card-value">NT$ ${formatNumber(totals.net)}</div>
-            </div>`;
-        }
-        if (settings.showCash) {
-            dashHTML += `
-            <div class="card">
-                <div class="card-title">現金資產</div>
-                <div class="card-value" style="color:#10B981">NT$ ${formatNumber(totals.cash)}</div>
-            </div>`;
-        }
-        if (settings.showStock) {
-            dashHTML += `
-            <div class="card">
-                <div class="card-title">股票資產</div>
-                <div class="card-value" style="color:#3B82F6">NT$ ${formatNumber(totals.stock)}</div>
-            </div>`;
-        }
-        if (settings.showDebt) {
-            dashHTML += `
-            <div class="card">
-                <div class="card-title">累積負債</div>
-                <div class="card-value" style="color:#EF4444">NT$ ${formatNumber(totals.debt)}</div>
-            </div>`;
-        }
-        dashboard.innerHTML = dashHTML;
-
-        // 2. Render List
-        let listHTML = '';
-        
-        // Group items
-        const funds = assets.filter(a => a.category === 'fund');
-        const stocks = assets.filter(a => a.category === 'stock');
-        const debts = assets.filter(a => a.category === 'liability');
-
-        if (funds.length > 0) {
-            listHTML += `<div class="section-header">資金列表</div>`;
-            funds.forEach(a => {
-                listHTML += `
-                <div class="asset-item">
-                    <div class="asset-info">
-                        <h4>${a.desc}</h4>
-                        <p>${a.currency}</p>
-                    </div>
-                    <div style="display:flex; align-items:center;">
-                        <div class="asset-amount">
-                            $${formatNumber(a.amount)}
-                        </div>
-                        <button class="delete-btn" onclick="deleteAsset(${a.id})">×</button>
-                    </div>
-                </div>`;
-            });
-        }
-
-        if (stocks.length > 0) {
-            listHTML += `<div class="section-header">股票庫存</div>`;
-            stocks.forEach(a => {
-                // Calculation: Gain = (Current - Cost) * Qty
-                const gain = (a.currentPrice - a.cost) * a.qty;
-                const totalVal = a.currentPrice * a.qty; // Market Value
-                const gainClass = gain >= 0 ? 'color-green' : 'color-red';
-                const sign = gain >= 0 ? '+' : '';
+                <h3 class="text-lg font-bold text-gray-400 mb-1">決定就是這家了！</h3>
+                <h2 id="modal-shop-name" class="text-2xl font-black text-gray-800 mb-2 leading-tight">店家名稱</h2>
+                <p id="modal-shop-type" class="text-sm text-gray-500 mb-6 bg-gray-100 inline-block px-3 py-1 rounded-full">類型</p>
                 
-                listHTML += `
-                <div class="asset-item">
-                    <div class="asset-info">
-                        <h4>${a.symbol} (${a.market})</h4>
-                        <p>現價: ${a.currentPrice} | 成本: ${a.cost} | 股數: ${a.qty}</p>
-                    </div>
-                    <div style="display:flex; align-items:center;">
-                        <div class="asset-amount">
-                            <div>$${formatNumber(totalVal)}</div>
-                            <span class="asset-sub ${gainClass}">損益: ${sign}${formatNumber(Math.round(gain))}</span>
-                        </div>
-                        <button class="delete-btn" onclick="deleteAsset(${a.id})">×</button>
-                    </div>
-                </div>`;
+                <div class="flex gap-3">
+                    <button onclick="closeModal()" class="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition">
+                        再選一次
+                    </button>
+                    <button onclick="openGoogleMapsFromModal()" class="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg hover:bg-blue-700 transition flex items-center justify-center">
+                        <i class="fa-solid fa-diamond-turn-right mr-2"></i> 去導航
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- No Results / Error State -->
+    <div id="error-msg" class="hidden fixed top-20 left-1/2 transform -translate-x-1/2 bg-red-100 text-red-700 px-4 py-2 rounded-lg shadow-md text-sm whitespace-nowrap z-50">
+        <i class="fa-solid fa-circle-exclamation mr-1"></i> <span id="error-text">發生錯誤</span>
+    </div>
+
+    <script>
+        let currentUserLocation = null;
+        let shopsData = [];
+        let currentMode = 'all'; // all, date, noodle
+        let selectedShop = null;
+
+        const statusBadge = document.getElementById('status-badge');
+        const startScreen = document.getElementById('start-screen');
+        const loadingScreen = document.getElementById('loading-screen');
+        const resultsList = document.getElementById('results-list');
+        const fabContainer = document.getElementById('fab-container');
+        const modal = document.getElementById('modal');
+        const modalContent = document.getElementById('modal-content');
+
+        // Personalization for Chenchen & Tangtang
+        const modes = {
+            'all': {
+                query: `["amenity"~"restaurant|fast_food|food_court"]`,
+                color: 'bg-orange-500',
+                icon: 'fa-utensils'
+            },
+            'date': {
+                // Focus on cafes, ice cream, sweeter things or nice restaurants
+                query: `["amenity"~"cafe|ice_cream"]`, 
+                color: 'bg-pink-500',
+                icon: 'fa-heart'
+            },
+            'noodle': {
+                // Generic restaurant but we will filter names later or just general food
+                query: `["cuisine"~"noodle|ramen|japanese"]`,
+                fallbackQuery: `["amenity"="restaurant"]`, // Fallback
+                color: 'bg-yellow-600',
+                icon: 'fa-bowl-food'
+            }
+        };
+
+        function setMode(mode) {
+            currentMode = mode;
+            
+            // Update UI buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('bg-orange-500', 'bg-pink-500', 'bg-yellow-600', 'text-white', 'shadow-md');
+                btn.classList.add('bg-gray-100', 'text-gray-600');
             });
+
+            const activeBtn = document.getElementById(`btn-${mode}`);
+            activeBtn.classList.remove('bg-gray-100', 'text-gray-600');
+            activeBtn.classList.add(modes[mode].color, 'text-white', 'shadow-md');
+
+            // If we already have location, re-fetch
+            if (currentUserLocation) {
+                fetchShops(currentUserLocation.lat, currentUserLocation.lng);
+            }
         }
 
-        if (debts.length > 0) {
-            listHTML += `<div class="section-header">負債項目</div>`;
-            debts.forEach(a => {
-                listHTML += `
-                <div class="asset-item">
-                    <div class="asset-info">
-                        <h4>${a.desc}</h4>
-                        <p>待償還</p>
+        function getLocation() {
+            if (!navigator.geolocation) {
+                showError("瀏覽器不支援地理定位");
+                return;
+            }
+
+            statusBadge.classList.remove('hidden');
+            statusBadge.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> 定位中...';
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    currentUserLocation = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    };
+                    statusBadge.innerHTML = '<i class="fa-solid fa-location-arrow text-green-600 mr-1"></i> 定位成功';
+                    statusBadge.classList.add('bg-green-100', 'text-green-800');
+                    fetchShops(currentUserLocation.lat, currentUserLocation.lng);
+                },
+                (error) => {
+                    let msg = "無法獲取位置";
+                    if (error.code === 1) msg = "請允許位置存取權限";
+                    showError(msg);
+                    statusBadge.innerHTML = '定位失敗';
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+
+        async function fetchShops(lat, lng) {
+            startScreen.classList.add('hidden');
+            loadingScreen.classList.remove('hidden');
+            resultsList.classList.add('hidden');
+            fabContainer.classList.add('hidden');
+
+            try {
+                // Using Overpass API (OpenStreetMap) to avoid Google API Key requirement
+                // Searching within 1000m radius
+                let queryTag = modes[currentMode].query;
+                
+                // Construct Overpass QL
+                // Requesting json output, timeout 25s
+                const query = `
+                    [out:json][timeout:25];
+                    (
+                      node(around:1000,${lat},${lng})${queryTag};
+                      way(around:1000,${lat},${lng})${queryTag};
+                    );
+                    out center;
+                `;
+
+                const response = await fetch('https://overpass-api.de/api/interpreter', {
+                    method: 'POST',
+                    body: query
+                });
+
+                if (!response.ok) throw new Error("API Error");
+
+                const data = await response.json();
+                processResults(data.elements);
+
+            } catch (err) {
+                console.error(err);
+                showError("無法取得店家資料，請稍後再試");
+                loadingScreen.classList.add('hidden');
+                startScreen.classList.remove('hidden');
+            }
+        }
+
+        function processResults(elements) {
+            shopsData = elements.filter(el => el.tags && el.tags.name).map(el => {
+                const lat = el.lat || el.center.lat;
+                const lon = el.lon || el.center.lon;
+                // Calculate rough distance
+                const dist = getDistanceFromLatLonInKm(currentUserLocation.lat, currentUserLocation.lng, lat, lon);
+                return {
+                    id: el.id,
+                    name: el.tags.name,
+                    type: el.tags.cuisine || el.tags.amenity || '餐廳',
+                    lat: lat,
+                    lon: lon,
+                    distance: dist.toFixed(2),
+                    tags: el.tags
+                };
+            }).sort((a, b) => a.distance - b.distance); // Sort by distance
+
+            renderList();
+        }
+
+        function renderList() {
+            loadingScreen.classList.add('hidden');
+            resultsList.classList.remove('hidden');
+            resultsList.innerHTML = '';
+
+            if (shopsData.length === 0) {
+                resultsList.innerHTML = `
+                    <div class="text-center mt-10 text-gray-400">
+                        <i class="fa-solid fa-store-slash text-4xl mb-3"></i>
+                        <p>這附近 1 公里內似乎沒有找到符合的店家...</p>
+                        <button onclick="openGoogleSearchFallback()" class="mt-4 text-blue-500 underline">直接在 Google Maps 開啟搜尋</button>
                     </div>
-                    <div style="display:flex; align-items:center;">
-                        <div class="asset-amount color-red">
-                            -$${formatNumber(a.amount)}
+                `;
+                return;
+            }
+
+            fabContainer.classList.remove('hidden');
+            
+            // Add a header for direct google map search
+            const fallbackBtn = document.createElement('div');
+            fallbackBtn.className = 'px-4 pt-2 pb-2';
+            fallbackBtn.innerHTML = `
+                <button onclick="openGoogleSearchFallback()" class="w-full bg-white border border-blue-200 text-blue-600 py-2 rounded-lg text-sm font-semibold shadow-sm hover:bg-blue-50 transition">
+                    <i class="fa-brands fa-google"></i> 在 Google Maps 上查看所有營業中店家
+                </button>
+            `;
+            resultsList.appendChild(fallbackBtn);
+
+            shopsData.forEach(shop => {
+                const card = document.createElement('div');
+                card.className = 'bg-white p-4 rounded-xl shadow-sm mx-4 flex justify-between items-center card-anim cursor-pointer border-l-4 border-transparent hover:border-orange-400';
+                
+                // Icon selection
+                let iconClass = 'fa-utensils';
+                let iconColor = 'text-orange-400';
+                if (shop.tags.amenity === 'cafe') { iconClass = 'fa-mug-hot'; iconColor = 'text-pink-400'; }
+                if (shop.tags.cuisine === 'burger') { iconClass = 'fa-burger'; }
+                
+                card.innerHTML = `
+                    <div class="flex items-center overflow-hidden">
+                        <div class="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center flex-shrink-0 mr-3">
+                            <i class="fa-solid ${iconClass} ${iconColor}"></i>
                         </div>
-                        <button class="delete-btn" onclick="deleteAsset(${a.id})">×</button>
+                        <div class="min-w-0">
+                            <h3 class="font-bold text-gray-800 truncate text-base">${shop.name}</h3>
+                            <p class="text-xs text-gray-500 truncate">
+                                <i class="fa-solid fa-location-dot text-gray-300"></i> ${shop.distance} km 
+                                <span class="mx-1">•</span> ${translateType(shop.type)}
+                            </p>
+                        </div>
                     </div>
-                </div>`;
+                    <div class="flex-shrink-0 ml-2">
+                         <i class="fa-solid fa-chevron-right text-gray-300 text-sm"></i>
+                    </div>
+                `;
+                card.onclick = () => openGoogleMap(shop);
+                resultsList.appendChild(card);
             });
+            
+            // Add extra space at bottom for FAB
+            const spacer = document.createElement('div');
+            spacer.className = 'h-16';
+            resultsList.appendChild(spacer);
         }
 
-        listSection.innerHTML = listHTML || '<div style="text-align:center; padding:2rem; color:#aaa;">尚未新增資產</div>';
-    }
+        // --- Helper Functions ---
 
-    // --- Helpers & UI ---
-
-    function updateFormFields() {
-        const type = document.getElementById('assetCategory').value;
-        document.getElementById('fundFields').style.display = type === 'fund' ? 'block' : 'none';
-        document.getElementById('stockFields').style.display = type === 'stock' ? 'block' : 'none';
-        document.getElementById('liabilityFields').style.display = type === 'liability' ? 'block' : 'none';
-    }
-
-    function searchStock() {
-        const symbol = document.getElementById('stockSymbol').value.toUpperCase();
-        if(!symbol) return alert('請輸入代號');
-        
-        // Mock Data for Demo (Real API requires backend proxy usually)
-        let mockPrice = 0;
-        
-        // 簡單模擬一些數據
-        if(symbol === '2330' || symbol.includes('TSMC')) mockPrice = 585;
-        else if(symbol === '2317') mockPrice = 105;
-        else if(symbol === 'AAPL') mockPrice = 185;
-        else if(symbol === 'TSLA') mockPrice = 240;
-        else if(symbol === 'NVDA') mockPrice = 460;
-        else {
-            // Random price if unknown
-            mockPrice = Math.floor(Math.random() * 500) + 10;
+        function translateType(type) {
+            const dict = {
+                'restaurant': '餐廳', 'fast_food': '速食', 'cafe': '咖啡廳', 'ice_cream': '冰淇淋',
+                'noodle': '麵店', 'japanese': '日式料理', 'burger': '漢堡', 'pizza': '披薩',
+                'coffee_shop': '咖啡店', 'food_court': '美食街'
+            };
+            return dict[type] || type;
         }
 
-        document.getElementById('stockCurrentPrice').value = mockPrice;
-        alert(`已查詢 ${symbol}，模擬現價為: ${mockPrice} (實際使用需串接API)`);
-    }
-
-    function openAddModal() {
-        document.getElementById('addModal').style.display = 'flex';
-        updateFormFields();
-    }
-
-    function openFilterModal() {
-        document.getElementById('filterModal').style.display = 'flex';
-    }
-
-    function closeModal(id) {
-        document.getElementById(id).style.display = 'none';
-    }
-
-    function resetForm() {
-        document.getElementById('fundAmount').value = '';
-        document.getElementById('fundDesc').value = '';
-        document.getElementById('stockSymbol').value = '';
-        document.getElementById('stockCurrentPrice').value = '';
-        document.getElementById('stockCost').value = '';
-        document.getElementById('stockQty').value = '';
-        document.getElementById('liabilityAmount').value = '';
-    }
-
-    function formatNumber(num) {
-        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    }
-
-    function saveData() {
-        localStorage.setItem('myAssets', JSON.stringify(assets));
-    }
-
-    function saveSettings() {
-        settings.showTotal = document.getElementById('showTotal').checked;
-        settings.showCash = document.getElementById('showCash').checked;
-        settings.showStock = document.getElementById('showStock').checked;
-        settings.showDebt = document.getElementById('showDebt').checked;
-        localStorage.setItem('mySettings', JSON.stringify(settings));
-        render(); // Re-render immediately when toggled
-    }
-
-    function loadSettings() {
-        document.getElementById('showTotal').checked = settings.showTotal;
-        document.getElementById('showCash').checked = settings.showCash;
-        document.getElementById('showStock').checked = settings.showStock;
-        document.getElementById('showDebt').checked = settings.showDebt;
-    }
-
-    // Click outside to close modal
-    window.onclick = function(event) {
-        if (event.target.classList.contains('modal')) {
-            event.target.style.display = "none";
+        function pickRandom() {
+            if (shopsData.length === 0) return;
+            
+            const randIndex = Math.floor(Math.random() * shopsData.length);
+            selectedShop = shopsData[randIndex];
+            
+            document.getElementById('modal-shop-name').innerText = selectedShop.name;
+            document.getElementById('modal-shop-type').innerText = translateType(selectedShop.type);
+            
+            modal.classList.remove('hidden');
+            // Animation for modal content
+            setTimeout(() => {
+                modalContent.classList.remove('scale-95', 'opacity-0');
+                modalContent.classList.add('scale-100', 'opacity-100');
+            }, 10);
         }
-    }
-</script>
 
+        function closeModal() {
+            modalContent.classList.remove('scale-100', 'opacity-100');
+            modalContent.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        // Direct link to specific shop coordinates
+        function openGoogleMap(shop) {
+            // Using query with coordinates ensures marker drops at right place
+            // Adding "open now" is tricky with direct marker, but we assume user checks
+            const query = encodeURIComponent(shop.name);
+            const url = `https://www.google.com/maps/search/?api=1&query=${query}&query_place_id=${shop.lat},${shop.lon}`;
+            window.open(url, '_blank');
+        }
+
+        function openGoogleMapsFromModal() {
+            if(selectedShop) openGoogleMap(selectedShop);
+        }
+
+        // Fallback: Opens a general search in Google Maps with "Open Now" implied by user action
+        // Note: Google Maps URL scheme supports 'query' but explicit "open now" filter via URL 
+        // is not officially documented for standard web intents reliably across all devices,
+        // but searching "Open restaurants near me" usually works.
+        function openGoogleSearchFallback() {
+            let keyword = "美食";
+            if (currentMode === 'date') keyword = "氣氛好的餐廳 咖啡廳";
+            if (currentMode === 'noodle') keyword = "麵店";
+
+            const url = `https://www.google.com/maps/search/${keyword}/@${currentUserLocation.lat},${currentUserLocation.lng},15z/data=!3m1!4b1`;
+            window.open(url, '_blank');
+        }
+
+        function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+            var R = 6371; 
+            var dLat = deg2rad(lat2-lat1);  
+            var dLon = deg2rad(lon2-lon1); 
+            var a = 
+                Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon/2) * Math.sin(dLon/2); 
+            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+            var d = R * c; 
+            return d;
+        }
+
+        function deg2rad(deg) {
+            return deg * (Math.PI/180);
+        }
+
+        function showError(text) {
+            const errDiv = document.getElementById('error-msg');
+            document.getElementById('error-text').innerText = text;
+            errDiv.classList.remove('hidden');
+            setTimeout(() => {
+                errDiv.classList.add('hidden');
+            }, 3000);
+        }
+    </script>
 </body>
 </html>
+
