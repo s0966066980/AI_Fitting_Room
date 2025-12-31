@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>今天吃什麼？v6.0 (專業版)</title>
+    <title>今天吃什麼？v7.0 (完美版)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome -->
@@ -26,81 +26,58 @@
             height: 30px;
             animation: spin 1s linear infinite;
         }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .card-anim {
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .card-anim:active {
-            transform: scale(0.98);
-        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .card-anim { transition: transform 0.2s, box-shadow 0.2s; }
+        .card-anim:active { transform: scale(0.98); }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* Status Lights */
-        .status-dot {
-            width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px;
-        }
-        .status-open { background-color: #10B981; box-shadow: 0 0 4px #10B981; }
-        .status-closed { background-color: #EF4444; }
-
         /* Toggle Switch */
-        .toggle-checkbox:checked {
-            right: 0;
-            border-color: #3B82F6;
-        }
-        .toggle-checkbox:checked + .toggle-label {
-            background-color: #3B82F6;
-        }
+        .toggle-checkbox:checked { right: 0; border-color: #3B82F6; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #3B82F6; }
         
-        /* Wheel Styling */
-        #wheel-canvas {
-            transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99); 
+        /* Sub-category chips */
+        .chip {
+            transition: all 0.2s;
+            white-space: nowrap;
         }
-        .arrow-down {
-            width: 0; height: 0; 
-            border-left: 15px solid transparent;
-            border-right: 15px solid transparent;
-            border-top: 25px solid #DC2626;
-            position: absolute; top: -5px; left: 50%;
-            transform: translateX(-50%); z-index: 20;
-            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));
+        .chip.active {
+            background-color: #3B82F6; color: white; border-color: transparent;
         }
-        #mini-map {
-            width: 100%; height: 180px; background-color: #eee; border-radius: 0.5rem; margin-bottom: 1rem;
-        }
-        .photo-thumb {
-            width: 80px; height: 80px; object-fit: cover; border-radius: 8px;
-        }
+
+        #mini-map { width: 100%; height: 180px; background-color: #eee; border-radius: 0.5rem; margin-bottom: 1rem; }
+        .photo-thumb { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; }
+        
+        /* Star Rating */
+        .star-rating i { cursor: pointer; transition: color 0.2s; }
+        .star-rating i:hover { color: #F59E0B; }
     </style>
 </head>
 <body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
 
     <!-- Header -->
-    <header class="bg-white shadow-sm z-10 px-4 py-3 flex justify-between items-center">
+    <header class="bg-white shadow-sm z-20 px-4 py-3 flex justify-between items-center relative">
         <div class="flex items-center gap-2">
             <button onclick="refreshSearch()" class="bg-blue-50 text-blue-600 w-9 h-9 rounded-full flex items-center justify-center hover:bg-blue-100 transition shadow-sm active:scale-90" title="重新整理與隨機推薦">
                 <i class="fa-solid fa-arrows-rotate"></i>
             </button>
             <div>
                 <h1 class="text-xl font-bold text-gray-800">今天吃什麼</h1>
-                <p class="text-xs text-gray-500">Hi Oli，<span id="date-display"></span></p>
+                <p class="text-xs text-gray-500">Hi 晨晨，<span id="date-display"></span></p>
             </div>
         </div>
         <div class="flex gap-3">
-             <button onclick="openApiKeySettings()" class="bg-gray-100 p-2 rounded-full text-gray-600 hover:bg-gray-200 transition relative">
+             <button onclick="openApiKeySettings()" class="bg-gray-100 p-2 rounded-full text-gray-600 hover:bg-gray-200 transition">
                 <i class="fa-solid fa-key"></i>
             </button>
-            <button onclick="openHistory()" class="bg-gray-100 p-2 rounded-full text-gray-600 hover:bg-gray-200 transition relative">
-                <i class="fa-solid fa-clock-rotate-left"></i>
+            <button onclick="openFavorites()" class="bg-pink-50 p-2 rounded-full text-pink-500 hover:bg-pink-100 transition relative">
+                <i class="fa-solid fa-heart"></i>
             </button>
         </div>
     </header>
 
     <!-- Controls -->
-    <div class="bg-white border-b border-gray-200 pb-2">
+    <div class="bg-white border-b border-gray-200 pb-2 z-10">
         <!-- Range & Filter Row -->
         <div class="px-4 py-2" id="range-container">
             <div class="flex justify-between items-center mb-2">
@@ -117,28 +94,39 @@
                             <div class="block bg-gray-200 w-10 h-6 rounded-full toggle-bg transition"></div>
                             <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition transform" id="toggle-dot"></div>
                         </div>
-                        <div class="ml-2 text-xs font-bold text-gray-600">只顯示營業中</div>
+                        <div class="ml-2 text-xs font-bold text-gray-600">只看營業中</div>
                     </label>
                 </div>
             </div>
             <input type="range" id="distance-range" min="100" max="2000" step="100" value="500" class="w-full accent-blue-500">
         </div>
 
-        <!-- Mode Buttons -->
+        <!-- Main Categories -->
         <div class="px-4 flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-hide pb-2">
             <button onclick="setMode('restaurant')" id="btn-restaurant" class="filter-btn px-4 py-1.5 rounded-full text-sm font-medium bg-blue-500 text-white shadow-md transition">
                 附近美食
             </button>
-            <button onclick="setMode('cafe')" id="btn-cafe" class="filter-btn px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
+            <button onclick="setMode('date')" id="btn-date" class="filter-btn px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
                 💕 棠棠約會
             </button>
             <button onclick="askCustomSearch()" id="btn-custom" class="filter-btn px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition border border-gray-200">
                 🔍 自訂搜尋
             </button>
         </div>
+
+        <!-- Sub Categories (Only for Restaurant Mode) -->
+        <div id="sub-categories" class="px-4 flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-hide pb-1 mt-1 transition-all duration-300">
+            <button onclick="setSubCategory('all')" class="chip active px-3 py-1 rounded-full text-xs font-medium border border-blue-100 bg-blue-50 text-blue-600">全部</button>
+            <button onclick="setSubCategory('居酒屋')" class="chip px-3 py-1 rounded-full text-xs font-medium border border-gray-200 text-gray-600 bg-white">🍺 居酒屋</button>
+            <button onclick="setSubCategory('日式料理')" class="chip px-3 py-1 rounded-full text-xs font-medium border border-gray-200 text-gray-600 bg-white">🍣 日料</button>
+            <button onclick="setSubCategory('火鍋')" class="chip px-3 py-1 rounded-full text-xs font-medium border border-gray-200 text-gray-600 bg-white">🍲 火鍋</button>
+            <button onclick="setSubCategory('燒烤')" class="chip px-3 py-1 rounded-full text-xs font-medium border border-gray-200 text-gray-600 bg-white">🔥 燒烤</button>
+            <button onclick="setSubCategory('炸物')" class="chip px-3 py-1 rounded-full text-xs font-medium border border-gray-200 text-gray-600 bg-white">🍗 炸物</button>
+            <button onclick="setSubCategory('酒吧')" class="chip px-3 py-1 rounded-full text-xs font-medium border border-gray-200 text-gray-600 bg-white">🍸 酒吧</button>
+        </div>
         
-        <!-- Keyword Display -->
-        <div id="keyword-badge" class="hidden px-4 py-1">
+        <!-- Keyword Badge -->
+        <div id="keyword-badge" class="hidden px-4 py-1 mt-1">
             <span class="text-xs font-bold text-blue-600 bg-blue-100 px-2 py-1 rounded-md">
                 搜尋：<span id="current-keyword-text"></span>
                 <button onclick="setMode('restaurant')" class="ml-2 text-blue-400 hover:text-blue-700"><i class="fa-solid fa-xmark"></i></button>
@@ -158,8 +146,8 @@
                 <div class="absolute top-0 left-0 w-32 h-32 bg-blue-400 rounded-full opacity-20 animate-ping"></div>
             </div>
             <div>
-                <h2 class="text-xl font-bold text-gray-800">Google 美食雷達</h2>
-                <p class="text-gray-500 mt-2 text-sm px-8">請先設定 API Key，然後找出周圍 <span id="start-range-text">500</span> 公尺內的精選 20 家好店</p>
+                <h2 class="text-xl font-bold text-gray-800">美食雷達 v7.0</h2>
+                <p class="text-gray-500 mt-2 text-sm px-8">隨機精選 20 家 • 營業時間判斷 • 最愛評分</p>
                 <p id="api-status" class="text-xs text-red-500 mt-2 font-bold hidden">尚未設定 API Key</p>
             </div>
             <button onclick="getLocation()" class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold py-3 px-10 rounded-xl shadow-lg transform transition hover:scale-105 active:scale-95 flex items-center text-lg">
@@ -199,7 +187,7 @@
         <button onclick="closeWheel()" class="mt-8 text-gray-400 text-sm hover:text-white underline">取消</button>
     </div>
 
-    <!-- Result Modal (With Map & Hours) -->
+    <!-- Result Modal -->
     <div id="modal" class="fixed inset-0 bg-black bg-opacity-60 z-[60] hidden flex items-center justify-center p-4 transition-opacity duration-300">
         <div class="bg-white rounded-2xl w-full max-w-sm p-5 shadow-2xl transform transition-all scale-95 opacity-0 flex flex-col max-h-[90vh]" id="modal-content">
             <div class="relative flex-1 overflow-y-auto scrollbar-hide">
@@ -208,25 +196,24 @@
                 <h2 id="modal-shop-name" class="text-xl font-black text-gray-800 mb-1 pr-8 leading-tight">店家名稱</h2>
                 
                 <div class="flex items-center gap-2 mb-2">
-                    <span id="modal-shop-rating" class="text-orange-500 font-bold text-sm"><i class="fa-solid fa-star"></i> 4.5</span>
+                    <span id="modal-shop-rating" class="text-orange-500 font-bold text-sm"></span>
                     <span id="modal-shop-status" class="text-xs font-bold px-2 py-0.5 rounded border"></span>
-                    <span id="modal-shop-dist" class="text-blue-600 text-xs font-bold bg-blue-50 px-2 py-0.5 rounded"></span>
                 </div>
                 
-                <!-- Detailed Opening Hours Area -->
-                <div id="modal-hours-container" class="mb-3 p-3 bg-gray-50 rounded-lg text-sm text-gray-600 hidden">
-                    <div class="font-bold mb-1 flex items-center"><i class="fa-regular fa-clock mr-2"></i> 今日營業時間</div>
-                    <div id="modal-hours-text" class="pl-6">載入中...</div>
+                <!-- Detailed Opening Hours -->
+                <div id="modal-hours-container" class="mb-3 p-3 bg-gray-50 rounded-lg text-sm text-gray-600 border border-gray-100">
+                    <div class="font-bold mb-1 flex items-center text-blue-600"><i class="fa-regular fa-clock mr-2"></i> <span id="modal-hours-title">營業時間</span></div>
+                    <div id="modal-hours-text" class="pl-6 text-gray-500">載入中...</div>
                 </div>
 
                 <p id="modal-shop-vicinity" class="text-xs text-gray-500 mb-3 truncate">地址資訊</p>
 
-                <!-- Google Map in Modal -->
+                <!-- Map -->
                 <div id="mini-map"></div>
 
                 <div class="grid grid-cols-2 gap-3 mt-2">
-                    <button onclick="saveToHistoryAndClose()" class="col-span-2 py-2.5 bg-yellow-50 text-yellow-700 rounded-xl font-bold hover:bg-yellow-100 transition border border-yellow-200">
-                        <i class="fa-solid fa-bookmark mr-1"></i> 紀錄：我吃這家
+                    <button id="btn-toggle-fav" onclick="toggleFavorite()" class="col-span-2 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition border border-gray-200">
+                        <i class="fa-regular fa-heart mr-1"></i> 加入最愛
                     </button>
                     <button onclick="shareShop()" class="py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition">
                         <i class="fa-brands fa-line text-green-600"></i> 分享
@@ -239,195 +226,162 @@
         </div>
     </div>
 
-    <!-- History Modal -->
-    <div id="history-modal" class="fixed inset-0 bg-white z-[70] hidden flex flex-col transition-transform duration-300 translate-y-full">
+    <!-- Favorites Modal -->
+    <div id="fav-modal" class="fixed inset-0 bg-white z-[70] hidden flex flex-col transition-transform duration-300 translate-y-full">
         <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-            <h2 class="text-lg font-bold text-gray-800"><i class="fa-solid fa-book-open text-orange-500 mr-2"></i>吃貨評分紀錄</h2>
-            <button onclick="closeHistory()" class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">
+            <h2 class="text-lg font-bold text-gray-800"><i class="fa-solid fa-heart text-pink-500 mr-2"></i>我的最愛 & 評分</h2>
+            <button onclick="closeFavorites()" class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
-        <div class="flex-1 overflow-y-auto p-4 space-y-4" id="history-list">
-            <!-- History Items will be injected here -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-4" id="fav-list">
+            <!-- Items injected here -->
         </div>
         <div class="p-4 border-t border-gray-200 bg-white text-center">
-            <button onclick="clearHistory()" class="text-red-500 text-sm font-medium">清除所有紀錄</button>
+            <button onclick="clearFavorites()" class="text-red-500 text-sm font-medium">清除所有最愛</button>
         </div>
     </div>
 
     <script>
         // --- Global Variables ---
-        let map; 
-        let placesService;
+        let map, placesService;
         let currentUserLocation = null;
-        let allFetchedShops = []; // Raw results
-        let displayedShops = []; // Filtered & Sliced (20)
-        let currentMode = 'restaurant'; 
+        let allFetchedShops = [];
+        let displayedShops = [];
+        let currentMode = 'restaurant';
+        let subCategory = 'all';
         let currentCustomKeyword = '';
         let selectedShop = null;
         let currentRadius = 500;
         let onlyOpenNow = false;
-        let historyData = JSON.parse(localStorage.getItem('foodHistory')) || [];
+        let myFavorites = JSON.parse(localStorage.getItem('myFavorites')) || [];
         let apiKey = localStorage.getItem('googleMapsApiKey') || '';
         let scriptLoaded = false;
+        
+        // DOM Elements
+        const startScreen = document.getElementById('start-screen');
+        const loadingScreen = document.getElementById('loading-screen');
+        const resultsList = document.getElementById('results-list');
+        const rangeValue = document.getElementById('range-value');
+        const toggleCheckbox = document.getElementById('open-now-toggle');
+        const toggleDot = document.getElementById('toggle-dot');
+        const subCatDiv = document.getElementById('sub-categories');
 
-        // Wheel variables
+        // Wheel vars
         let wheelCanvas = document.getElementById('wheel-canvas');
         let wheelCtx = wheelCanvas.getContext('2d');
         let isSpinning = false;
         let currentRotation = 0;
 
-        // DOM
-        const startScreen = document.getElementById('start-screen');
-        const loadingScreen = document.getElementById('loading-screen');
-        const resultsList = document.getElementById('results-list');
-        const rangeValue = document.getElementById('range-value');
-        const keywordBadge = document.getElementById('keyword-badge');
-        const distanceRange = document.getElementById('distance-range');
-        const toggleDot = document.getElementById('toggle-dot');
-        const toggleCheckbox = document.getElementById('open-now-toggle');
-        
-        // --- Initialization ---
+        // Init
         document.getElementById('date-display').innerText = new Date().toLocaleDateString('zh-TW', { month: 'long', day: 'numeric', weekday: 'short' });
+        if(!apiKey) document.getElementById('api-status').classList.remove('hidden');
+        else loadGoogleMapsScript();
 
-        if(!apiKey) {
-            document.getElementById('api-status').classList.remove('hidden');
-        } else {
-            loadGoogleMapsScript();
-        }
-
-        // --- Toggle Logic ---
-        function toggleOpenNow() {
-            onlyOpenNow = toggleCheckbox.checked;
-            
-            // Animation for toggle
-            if (onlyOpenNow) {
-                toggleDot.classList.add('translate-x-4');
-                document.querySelector('.toggle-bg').classList.remove('bg-gray-200');
-                document.querySelector('.toggle-bg').classList.add('bg-blue-500');
-            } else {
-                toggleDot.classList.remove('translate-x-4');
-                document.querySelector('.toggle-bg').classList.add('bg-gray-200');
-                document.querySelector('.toggle-bg').classList.remove('bg-blue-500');
-            }
-
-            if (currentUserLocation) {
-                // If we have data, just re-process and render, no need to re-fetch API to save quota
-                if (allFetchedShops.length > 0) {
-                    processAndRenderShops();
-                } else {
-                    fetchShops();
-                }
-            }
-        }
-
-        // --- API Key Management ---
+        // --- API & Map Loader ---
         async function openApiKeySettings() {
             const { value: key } = await Swal.fire({
-                title: '設定 Google Maps API Key',
+                title: '設定 API Key',
                 input: 'text',
                 inputValue: apiKey,
-                inputLabel: '需啟用 Maps JS & Places API',
                 showCancelButton: true,
-                confirmButtonText: '儲存並載入'
+                confirmButtonText: '儲存'
             });
-
             if (key) {
                 apiKey = key;
                 localStorage.setItem('googleMapsApiKey', apiKey);
-                Swal.fire('已儲存', '正在重新載入...', 'success').then(() => location.reload());
+                location.reload();
             }
         }
-
         function loadGoogleMapsScript() {
             if (scriptLoaded) return;
             const script = document.createElement('script');
             script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&language=zh-TW`;
-            script.async = true;
-            script.defer = true;
-            script.onload = () => {
-                scriptLoaded = true;
-                console.log("Google Maps SDK Loaded");
-            };
-            script.onerror = () => {
-                Swal.fire('錯誤', 'API Key 無效或額度不足', 'error');
-                document.getElementById('api-status').classList.remove('hidden');
-            };
+            script.async = true; script.defer = true;
+            script.onload = () => { scriptLoaded = true; };
             document.head.appendChild(script);
         }
 
-        // --- Event Listeners ---
-        distanceRange.addEventListener('input', (e) => {
+        // --- Controls & Toggles ---
+        document.getElementById('distance-range').addEventListener('change', (e) => {
             currentRadius = e.target.value;
-            rangeValue.innerText = currentRadius >= 1000 ? (currentRadius/1000) + " 公里" : currentRadius + " 公尺";
-            document.getElementById('start-range-text').innerText = currentRadius;
+            if(currentUserLocation) refreshSearch();
+        });
+        document.getElementById('distance-range').addEventListener('input', (e) => {
+            rangeValue.innerText = e.target.value >= 1000 ? (e.target.value/1000) + " 公里" : e.target.value + " 公尺";
         });
 
-        distanceRange.addEventListener('change', (e) => {
-            currentRadius = e.target.value;
-            if (currentUserLocation) refreshSearch();
-        });
+        function toggleOpenNow() {
+            onlyOpenNow = toggleCheckbox.checked;
+            if (onlyOpenNow) {
+                toggleDot.classList.add('translate-x-4');
+                document.querySelector('.toggle-bg').classList.replace('bg-gray-200', 'bg-blue-500');
+            } else {
+                toggleDot.classList.remove('translate-x-4');
+                document.querySelector('.toggle-bg').classList.replace('bg-blue-500', 'bg-gray-200');
+            }
+            if(allFetchedShops.length > 0) processAndRenderShops();
+        }
 
-        // --- Core Functions ---
         function setMode(mode) {
             currentMode = mode;
-            keywordBadge.classList.add('hidden');
+            document.getElementById('keyword-badge').classList.add('hidden');
             
+            // Reset Buttons
             document.querySelectorAll('.filter-btn').forEach(btn => {
                 btn.className = "filter-btn px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition border border-gray-200";
             });
             
             if (mode !== 'custom') {
-                const activeBtn = document.getElementById(`btn-${mode}`);
-                activeBtn.classList.remove('bg-gray-100', 'text-gray-600');
-                activeBtn.classList.add('bg-blue-500', 'text-white', 'shadow-md', 'border-transparent');
-                
-                if (currentUserLocation) refreshSearch();
-                else getLocation();
+                document.getElementById(`btn-${mode}`).className = "filter-btn px-4 py-1.5 rounded-full text-sm font-medium bg-blue-500 text-white shadow-md transition border-transparent";
             }
+
+            // Show/Hide Sub-categories
+            if (mode === 'restaurant') {
+                subCatDiv.classList.remove('hidden');
+            } else {
+                subCatDiv.classList.add('hidden');
+            }
+
+            // Reset Subcategory if switching modes
+            if(mode !== 'restaurant') subCategory = '';
+
+            if (currentUserLocation) refreshSearch();
+            else getLocation();
+        }
+
+        function setSubCategory(cat) {
+            subCategory = cat;
+            // Update chip styles
+            const chips = subCatDiv.querySelectorAll('button');
+            chips.forEach(c => {
+                c.className = "chip px-3 py-1 rounded-full text-xs font-medium border border-gray-200 text-gray-600 bg-white";
+                if(c.innerText.includes(cat) || (cat==='all' && c.innerText==='全部')) {
+                    c.className = "chip active px-3 py-1 rounded-full text-xs font-medium border border-blue-100 bg-blue-50 text-blue-600";
+                }
+            });
+            refreshSearch();
         }
 
         async function askCustomSearch() {
-            const { value: keyword } = await Swal.fire({
-                title: '想吃什麼？',
-                input: 'text',
-                inputLabel: '搜尋關鍵字',
-                showCancelButton: true,
-                confirmButtonText: '搜尋'
-            });
-
+            const { value: keyword } = await Swal.fire({ title: '想吃什麼？', input: 'text', showCancelButton: true });
             if (keyword) {
                 currentCustomKeyword = keyword;
                 currentMode = 'custom';
-                document.querySelectorAll('.filter-btn').forEach(btn => btn.className = "filter-btn px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600 transition border border-gray-200");
-                const btnCustom = document.getElementById('btn-custom');
-                btnCustom.classList.add('bg-blue-500', 'text-white', 'shadow-md', 'border-transparent');
-                
-                keywordBadge.classList.remove('hidden');
+                subCatDiv.classList.add('hidden');
+                document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.replace('bg-blue-500', 'bg-gray-100'));
+                document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.replace('text-white', 'text-gray-600'));
+                document.getElementById('btn-custom').className = "filter-btn px-4 py-1.5 rounded-full text-sm font-medium bg-blue-500 text-white shadow-md transition border-transparent";
+                document.getElementById('keyword-badge').classList.remove('hidden');
                 document.getElementById('current-keyword-text').innerText = keyword;
-
-                if (!currentUserLocation) getLocation();
-                else refreshSearch();
-            }
-        }
-
-        function refreshSearch() {
-            if (!currentUserLocation) {
-                getLocation();
-            } else {
-                fetchShops();
+                
+                if(!currentUserLocation) getLocation(); else refreshSearch();
             }
         }
 
         function getLocation() {
-            if (!apiKey) {
-                openApiKeySettings();
-                return;
-            }
-            if (!navigator.geolocation) {
-                Swal.fire('錯誤', '不支援定位', 'error');
-                return;
-            }
+            if (!apiKey) { openApiKeySettings(); return; }
+            if (!navigator.geolocation) { Swal.fire('錯誤', '不支援定位', 'error'); return; }
             
             const mapDiv = document.createElement('div'); 
             map = new google.maps.Map(mapDiv, { center: {lat:0, lng:0}, zoom: 15 });
@@ -437,19 +391,17 @@
             loadingScreen.classList.remove('hidden');
 
             navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    currentUserLocation = {
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude
-                    };
+                (pos) => {
+                    currentUserLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
                     fetchShops();
                 },
-                (err) => {
-                    Swal.fire('定位失敗', '請允許瀏覽器取得位置', 'error');
-                    loadingScreen.classList.add('hidden');
-                    startScreen.classList.remove('hidden');
-                }
+                () => { loadingScreen.classList.add('hidden'); startScreen.classList.remove('hidden'); }
             );
+        }
+
+        function refreshSearch() {
+            if(!currentUserLocation) getLocation();
+            else fetchShops();
         }
 
         function fetchShops() {
@@ -460,66 +412,60 @@
             let request = {
                 location: currentUserLocation,
                 radius: currentRadius,
-                type: 'restaurant' 
+                type: 'restaurant' // default
             };
 
+            // Enhanced Mode Logic
             if (currentMode === 'cafe') {
-                request.type = 'cafe';
+                request.type = ['cafe', 'bakery']; 
+                request.keyword = '甜點 OR 咖啡 OR 下午茶';
             } else if (currentMode === 'custom') {
                 request.keyword = currentCustomKeyword;
-                request.type = undefined; 
+                delete request.type;
+            } else if (currentMode === 'restaurant') {
+                if (subCategory && subCategory !== 'all') {
+                    request.keyword = subCategory; // e.g., '居酒屋', '火鍋'
+                }
             }
 
-            // Fetching from Google
             placesService.nearbySearch(request, (results, status) => {
                 if (status === google.maps.places.PlacesServiceStatus.OK) {
-                    allFetchedShops = results; // Store raw results
+                    allFetchedShops = results;
                     processAndRenderShops();
                 } else {
                     loadingScreen.classList.add('hidden');
                     resultsList.classList.remove('hidden');
-                    resultsList.innerHTML = `<div class="text-center mt-10 text-gray-400">找不到相關店家 (${status})</div>`;
+                    resultsList.innerHTML = `<div class="text-center mt-10 text-gray-400">找不到店家 (${status})</div>`;
                 }
             });
         }
 
         function processAndRenderShops() {
-            // 1. Filter Logic
+            // Filter
             let filtered = allFetchedShops.filter(shop => {
-                // Determine Open Status
-                // shop.opening_hours.open_now is a Boolean provided by nearbySearch
-                // If it's undefined, we assume unknown (but don't filter out unless strict)
-                
                 if (onlyOpenNow) {
-                    return shop.opening_hours && shop.opening_hours.isOpen();
+                    // nearbySearch returns opening_hours.open_now boolean
+                    return shop.opening_hours && shop.opening_hours.open_now;
                 }
                 return true;
             });
 
-            // 2. Calculation & Decoration
+            // Decorate
             filtered = filtered.map(shop => {
-                const distMeters = calculateDistance(
+                const dist = calculateDistance(
                     currentUserLocation.lat, currentUserLocation.lng,
                     shop.geometry.location.lat(), shop.geometry.location.lng()
                 );
-                shop.distanceVal = distMeters;
-                shop.distanceText = distMeters < 1000 ? `${Math.round(distMeters)} m` : `${(distMeters/1000).toFixed(1)} km`;
-                
-                // Determine Status Text and Class
-                shop.isOpen = shop.opening_hours ? shop.opening_hours.isOpen() : null; // isOpen() is Google Maps V3 standard
-                
+                shop.distanceText = dist < 1000 ? `${Math.round(dist)} m` : `${(dist/1000).toFixed(1)} km`;
+                // Check if favorite
+                shop.isFav = myFavorites.some(fav => fav.place_id === shop.place_id);
                 return shop;
             });
 
-            // 3. Shuffle & Slice (Max 20)
-            // Randomize array
+            // Shuffle & Slice 20
             filtered.sort(() => 0.5 - Math.random());
-            // Take top 20
             displayedShops = filtered.slice(0, 20);
-            
-            // 4. Sort displayed by distance for better UX (optional, but shuffling makes it truly random list)
-            // Let's keep them random as requested "Random recommendation"
-            
+
             renderUI();
         }
 
@@ -531,287 +477,242 @@
 
             const infoDiv = document.createElement('div');
             infoDiv.className = "px-4 py-2 text-xs text-gray-500 flex justify-between";
-            let filterText = onlyOpenNow ? "(只顯示營業中)" : "";
-            infoDiv.innerHTML = `<span>隨機推薦 ${displayedShops.length} 家 ${filterText}</span> <span class="text-blue-500">Google Data</span>`;
+            infoDiv.innerHTML = `<span>隨機推薦 ${displayedShops.length} 家</span> <span class="text-blue-500">Google Data</span>`;
             resultsList.appendChild(infoDiv);
 
-            if (displayedShops.length === 0) {
-                 resultsList.innerHTML += `<div class="text-center mt-10 text-gray-400">沒有符合條件的店家<br>試試看放寬搜尋範圍？</div>`;
-                 return;
+            if(displayedShops.length === 0) {
+                resultsList.innerHTML += `<div class="text-center mt-10 text-gray-400">沒有符合條件的店家<br>請嘗試放寬條件</div>`;
+                return;
             }
 
             displayedShops.forEach(shop => {
                 const card = document.createElement('div');
-                card.className = 'bg-white p-3 rounded-xl shadow-sm mx-4 mb-3 flex items-start gap-3 cursor-pointer card-anim border border-gray-100 hover:border-blue-300';
+                card.className = 'bg-white p-3 rounded-xl shadow-sm mx-4 mb-3 flex items-start gap-3 cursor-pointer card-anim border border-gray-100 hover:border-blue-300 relative';
                 
                 let photoUrl = 'https://via.placeholder.com/80?text=No+Img';
-                if (shop.photos && shop.photos.length > 0) {
-                    photoUrl = shop.photos[0].getUrl({maxWidth: 200, maxHeight: 200});
-                } else if (shop.icon) {
-                    photoUrl = shop.icon; 
-                }
+                if (shop.photos && shop.photos.length > 0) photoUrl = shop.photos[0].getUrl({maxWidth:200, maxHeight:200});
+                else if (shop.icon) photoUrl = shop.icon;
 
-                // Rating
-                const rating = shop.rating ? `<span class="text-orange-500 font-bold text-xs"><i class="fa-solid fa-star"></i> ${shop.rating}</span>` : '<span class="text-gray-400 text-xs">無評分</span>';
+                const rating = shop.rating ? `<span class="text-orange-500 font-bold text-xs"><i class="fa-solid fa-star"></i> ${shop.rating}</span>` : '<span class="text-xs text-gray-400">無評分</span>';
                 
-                // Status Light
+                // Status
                 let statusHtml = '';
-                if (shop.isOpen === true) {
-                    statusHtml = `<span class="text-xs text-green-600 font-bold flex items-center"><span class="status-dot status-open"></span>營業中</span>`;
-                } else if (shop.isOpen === false) {
-                    statusHtml = `<span class="text-xs text-red-500 font-bold flex items-center"><span class="status-dot status-closed"></span>休息中</span>`;
-                } else {
-                    statusHtml = `<span class="text-xs text-gray-400">營業時間未知</span>`;
-                }
+                const isOpen = shop.opening_hours ? shop.opening_hours.open_now : null;
+                if (isOpen === true) statusHtml = `<span class="text-xs text-green-600 font-bold ml-2">● 營業中</span>`;
+                else if (isOpen === false) statusHtml = `<span class="text-xs text-red-500 font-bold ml-2">● 休息中</span>`;
+                
+                // Fav Icon
+                let favHtml = shop.isFav ? `<i class="fa-solid fa-heart text-pink-500 absolute top-3 right-3 text-lg drop-shadow-sm"></i>` : '';
 
                 card.innerHTML = `
-                    <img src="${photoUrl}" class="photo-thumb bg-gray-100 flex-shrink-0" onerror="this.src='https://via.placeholder.com/80?text=Food'">
-                    <div class="flex-1 min-w-0 pt-1 relative">
-                        <div class="flex justify-between items-start mb-1">
-                             <h3 class="font-bold text-gray-800 truncate pr-2 text-sm">${shop.name}</h3>
-                             <span class="text-xs font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded flex-shrink-0">${shop.distanceText}</span>
+                    <img src="${photoUrl}" class="photo-thumb bg-gray-100 flex-shrink-0">
+                    <div class="flex-1 min-w-0 pt-1">
+                        <div class="flex justify-between items-start mb-1 pr-6">
+                             <h3 class="font-bold text-gray-800 truncate text-sm">${shop.name}</h3>
                         </div>
-                        <div class="flex items-center gap-3 mb-1">
-                            ${rating}
-                            ${statusHtml}
+                        <div class="flex items-center mb-1">
+                            ${rating} ${statusHtml}
                         </div>
-                        <p class="text-xs text-gray-500 truncate"><i class="fa-solid fa-location-dot"></i> ${shop.vicinity || '無地址資訊'}</p>
+                         <p class="text-xs text-gray-500 truncate"><i class="fa-solid fa-location-dot"></i> ${shop.distanceText} • ${shop.vicinity || ''}</p>
                     </div>
+                    ${favHtml}
                 `;
-
-                card.onclick = () => {
-                    selectedShop = shop;
-                    openModal();
-                };
+                card.onclick = () => { selectedShop = shop; openModal(); };
                 resultsList.appendChild(card);
             });
-            
-            const spacer = document.createElement('div');
-            spacer.className = 'h-24';
-            resultsList.appendChild(spacer);
+            const spacer = document.createElement('div'); spacer.className = 'h-24'; resultsList.appendChild(spacer);
         }
 
-        // --- Distance Helper ---
+        // --- Distance ---
         function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371e3; 
-            const φ1 = lat1 * Math.PI/180; 
-            const φ2 = lat2 * Math.PI/180;
-            const Δφ = (lat2-lat1) * Math.PI/180;
-            const Δλ = (lon2-lon1) * Math.PI/180;
+            const R = 6371e3; const φ1 = lat1 * Math.PI/180; const φ2 = lat2 * Math.PI/180;
+            const Δφ = (lat2-lat1) * Math.PI/180; const Δλ = (lon2-lon1) * Math.PI/180;
             const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
-        // --- Modal & Details ---
+        // --- Modal & Detailed Hours ---
         function openModal() {
             if(!selectedShop) return;
             document.getElementById('modal-shop-name').innerText = selectedShop.name;
             document.getElementById('modal-shop-vicinity').innerText = selectedShop.vicinity || '';
-            document.getElementById('modal-shop-rating').innerHTML = selectedShop.rating ? `<i class="fa-solid fa-star"></i> ${selectedShop.rating} <span class="text-gray-400 text-xs">(${selectedShop.user_ratings_total || 0}則評論)</span>` : '無評分';
-            document.getElementById('modal-shop-dist').innerText = selectedShop.distanceText || '';
-
-            // Status Badge in Modal
+            document.getElementById('modal-shop-rating').innerHTML = selectedShop.rating ? `<i class="fa-solid fa-star"></i> ${selectedShop.rating} <span class="text-gray-400 text-xs">(${selectedShop.user_ratings_total||0})</span>` : '';
+            
+            // Status Badge
             const statusEl = document.getElementById('modal-shop-status');
-            if (selectedShop.isOpen) {
-                statusEl.innerText = "營業中";
-                statusEl.className = "text-xs font-bold px-2 py-0.5 rounded border border-green-200 bg-green-50 text-green-600";
-            } else if (selectedShop.isOpen === false) {
-                statusEl.innerText = "休息中";
-                statusEl.className = "text-xs font-bold px-2 py-0.5 rounded border border-red-200 bg-red-50 text-red-600";
+            const isOpen = selectedShop.opening_hours ? selectedShop.opening_hours.open_now : null;
+            if(isOpen) {
+                statusEl.innerText = "營業中"; statusEl.className = "text-xs font-bold px-2 py-0.5 rounded border border-green-200 bg-green-50 text-green-600";
+            } else if (isOpen === false) {
+                statusEl.innerText = "休息中"; statusEl.className = "text-xs font-bold px-2 py-0.5 rounded border border-red-200 bg-red-50 text-red-600";
             } else {
-                statusEl.innerText = "時間未知";
-                statusEl.className = "text-xs font-bold px-2 py-0.5 rounded border border-gray-200 bg-gray-50 text-gray-500";
+                statusEl.innerText = "時間未知"; statusEl.className = "text-xs text-gray-400";
             }
 
-            // Fetch Detailed Hours
-            fetchDetailedHours(selectedShop.place_id);
+            // Update Fav Button State
+            updateFavBtnState();
 
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                document.getElementById('modal-content').classList.remove('scale-95', 'opacity-0');
-            }, 10);
+            // Fetch Hours details
+            fetchDetailedHours(selectedShop.place_id);
 
             // Map
             const mapEl = document.getElementById('mini-map');
-            const shopLocation = selectedShop.geometry.location;
-            const miniMap = new google.maps.Map(mapEl, {
-                center: shopLocation,
-                zoom: 16,
-                disableDefaultUI: true,
-                zoomControl: true
-            });
-            new google.maps.Marker({
-                position: shopLocation,
-                map: miniMap,
-                title: selectedShop.name
-            });
+            const loc = selectedShop.geometry.location;
+            const miniMap = new google.maps.Map(mapEl, { center: loc, zoom: 16, disableDefaultUI: true });
+            new google.maps.Marker({ position: loc, map: miniMap });
+
+            document.getElementById('modal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('modal-content').classList.remove('scale-95', 'opacity-0'), 10);
         }
 
         function fetchDetailedHours(placeId) {
-            const container = document.getElementById('modal-hours-container');
-            const textEl = document.getElementById('modal-hours-text');
-            
-            container.classList.remove('hidden');
-            textEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-blue-500"></i> 讀取中...';
-
-            let req = {
-                placeId: placeId,
-                fields: ['opening_hours']
-            };
-
-            placesService.getDetails(req, (place, status) => {
+            document.getElementById('modal-hours-text').innerText = "讀取中...";
+            placesService.getDetails({ placeId: placeId, fields: ['opening_hours'] }, (place, status) => {
                 if (status === google.maps.places.PlacesServiceStatus.OK && place.opening_hours) {
-                    // Get today's day index (0 Sunday - 6 Saturday)
-                    // Google API weekday_text usually starts with Monday or Sunday depending on locale, 
-                    // but usually it's an array of 7 strings.
-                    // We need to match today.
+                    const isOpen = place.opening_hours.isOpen(); // Uses current time
+                    // weekday_text helps, but let's try to be smart about "Closing in..."
+                    // A simple approach is showing today's text
+                    const days = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+                    const todayDay = days[new Date().getDay()];
                     
-                    const todayIndex = new Date().getDay(); 
-                    // Shift: Google array usually 0 is Monday? No, docs say 0 is Sunday.
-                    // weekday_text is formatted string array. We can try to find the one that matches today's day name maybe?
-                    // Actually let's just use .weekday_text array. It's usually ordered 0: Monday... wait no.
-                    // Let's use `weekday_text` which is an array of strings like "Monday: 9:00 AM – 5:00 PM"
-                    
-                    // A simpler way: Find the string that contains today's day name in Traditional Chinese
-                    const daysMap = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
-                    const todayString = daysMap[todayIndex];
-                    
-                    if (place.opening_hours.weekday_text) {
-                        const todayInfo = place.opening_hours.weekday_text.find(day => day.includes(todayString));
-                        if (todayInfo) {
-                            // Split to just get the time part if possible, or show full string
-                            // usually "星期三: 11:00 – 14:00, 17:00 – 21:00"
-                            // Let's remove the day name to make it clean
-                            const timePart = todayInfo.replace(todayString, '').replace(':', '').trim();
-                            textEl.innerText = timePart || "今日營業時間未提供";
+                    if(place.opening_hours.weekday_text) {
+                        const todayText = place.opening_hours.weekday_text.find(t => t.startsWith(todayDay));
+                        if(todayText) {
+                            const timeStr = todayText.split(': ')[1]; // "11:00 AM – 9:00 PM"
+                            document.getElementById('modal-hours-text').innerHTML = `
+                                <span class="${isOpen ? 'text-green-600':'text-red-500'} font-bold">${isOpen?'營業中':'休息中'}</span> 
+                                <span class="ml-2">${timeStr}</span>`;
                         } else {
-                            textEl.innerText = "無法取得今日時段";
+                            document.getElementById('modal-hours-text').innerText = "今日無營業資訊";
                         }
-                    } else {
-                        textEl.innerText = "無詳細時段資訊";
                     }
                 } else {
-                    container.classList.add('hidden');
+                    document.getElementById('modal-hours-text').innerText = "無法取得詳細時段";
                 }
             });
         }
 
         function closeModal() {
-             document.getElementById('modal-content').classList.add('scale-95', 'opacity-0');
-             setTimeout(() => modal.classList.add('hidden'), 200);
+            document.getElementById('modal-content').classList.add('scale-95', 'opacity-0');
+            setTimeout(() => document.getElementById('modal').classList.add('hidden'), 200);
         }
 
         function openGoogleMapsNav() {
-            if(!selectedShop) return;
-            const query = encodeURIComponent(selectedShop.name);
-            let url = `https://www.google.com/maps/search/?api=1&query=${query}&query_place_id=${selectedShop.place_id}`;
-            window.open(url, '_blank');
+            const q = encodeURIComponent(selectedShop.name);
+            window.open(`https://www.google.com/maps/search/?api=1&query=${q}&query_place_id=${selectedShop.place_id}`, '_blank');
         }
 
-        // --- Wheel Logic ---
-        function openWheel() {
-            if (displayedShops.length === 0) return;
+        // --- Favorites Logic ---
+        function updateFavBtnState() {
+            const btn = document.getElementById('btn-toggle-fav');
+            const isFav = myFavorites.some(f => f.place_id === selectedShop.place_id);
+            if(isFav) {
+                btn.innerHTML = `<i class="fa-solid fa-heart text-pink-500 mr-1"></i> 已在最愛`;
+                btn.classList.add('text-pink-600', 'bg-pink-50', 'border-pink-200');
+            } else {
+                btn.innerHTML = `<i class="fa-regular fa-heart mr-1"></i> 加入最愛`;
+                btn.className = "col-span-2 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition border border-gray-200";
+            }
+        }
+
+        function toggleFavorite() {
+            const idx = myFavorites.findIndex(f => f.place_id === selectedShop.place_id);
+            if (idx >= 0) {
+                myFavorites.splice(idx, 1);
+                Swal.fire({ icon: 'success', title: '已移除最愛', timer: 1000, showConfirmButton: false });
+            } else {
+                myFavorites.unshift({
+                    place_id: selectedShop.place_id,
+                    name: selectedShop.name,
+                    vicinity: selectedShop.vicinity,
+                    rating: 0 // User rating
+                });
+                Swal.fire({ icon: 'success', title: '已加入最愛！', timer: 1000, showConfirmButton: false });
+            }
+            localStorage.setItem('myFavorites', JSON.stringify(myFavorites));
+            updateFavBtnState();
+            if(currentUserLocation) processAndRenderShops(); // Refresh list icons
+        }
+
+        function openFavorites() {
+            const list = document.getElementById('fav-list');
+            list.innerHTML = '';
+            if(myFavorites.length === 0) list.innerHTML = `<div class="text-center text-gray-400 mt-10">還沒有收藏喔</div>`;
+            
+            myFavorites.forEach((fav, i) => {
+                let stars = '';
+                for(let s=1; s<=5; s++) {
+                    const c = s <= fav.rating ? 'text-yellow-400' : 'text-gray-300';
+                    stars += `<i class="fa-solid fa-star text-lg ${c} px-1" onclick="rateFavorite(${i}, ${s})"></i>`;
+                }
+                list.innerHTML += `
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                        <div class="flex justify-between mb-2">
+                            <h3 class="font-bold text-gray-800">${fav.name}</h3>
+                            <button onclick="removeFavorite(${i})" class="text-gray-300 hover:text-red-500"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                        <div class="flex items-center"><span class="text-xs text-gray-500 mr-2">我的評分:</span> ${stars}</div>
+                    </div>`;
+            });
+            document.getElementById('fav-modal').classList.remove('hidden', 'translate-y-full');
+            document.getElementById('fav-modal').classList.add('translate-y-0');
+        }
+
+        function rateFavorite(index, rating) {
+            myFavorites[index].rating = rating;
+            localStorage.setItem('myFavorites', JSON.stringify(myFavorites));
+            openFavorites();
+        }
+        function removeFavorite(index) {
+            myFavorites.splice(index, 1);
+            localStorage.setItem('myFavorites', JSON.stringify(myFavorites));
+            openFavorites();
+            if(currentUserLocation) processAndRenderShops();
+        }
+        function closeFavorites() {
+             document.getElementById('fav-modal').classList.add('translate-y-full');
+             setTimeout(()=>document.getElementById('fav-modal').classList.add('hidden'), 300);
+        }
+        function clearFavorites() { if(confirm("清空？")) { myFavorites=[]; localStorage.setItem('myFavorites','[]'); openFavorites(); processAndRenderShops(); } }
+
+        // --- Wheel ---
+        function openWheel() { 
+            if(displayedShops.length===0) return;
             document.getElementById('wheel-modal').classList.remove('hidden');
             drawWheel(displayedShops);
             wheelCanvas.onclick = () => spinWheel(displayedShops);
         }
         function closeWheel() { document.getElementById('wheel-modal').classList.add('hidden'); }
         function drawWheel(data) {
-             const count = data.length;
-             const arc = (2 * Math.PI) / count;
+             const count = data.length; const arc = (2*Math.PI)/count;
              const colors = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#FF9F43', '#54A0FF', '#5F27CD', '#FD79A8'];
-             wheelCtx.clearRect(0,0,320,320);
-             wheelCtx.save();
-             wheelCtx.translate(160,160);
-             wheelCtx.rotate(currentRotation);
+             wheelCtx.clearRect(0,0,320,320); wheelCtx.save(); wheelCtx.translate(160,160); wheelCtx.rotate(currentRotation);
              for(let i=0; i<count; i++){
-                 const angle = i*arc;
-                 wheelCtx.beginPath();
-                 wheelCtx.fillStyle = colors[i % colors.length];
-                 wheelCtx.moveTo(0,0);
-                 wheelCtx.arc(0,0,150,angle, angle+arc);
-                 wheelCtx.fill();
-                 wheelCtx.save();
-                 wheelCtx.translate(Math.cos(angle+arc/2)*100, Math.sin(angle+arc/2)*100);
-                 wheelCtx.rotate(angle+arc/2+Math.PI/2);
-                 wheelCtx.fillStyle="#fff";
-                 wheelCtx.font="bold 12px Arial";
-                 let text = data[i].name.substring(0,6);
-                 wheelCtx.fillText(text, -wheelCtx.measureText(text).width/2, 0);
-                 wheelCtx.restore();
+                 const angle = i*arc; wheelCtx.beginPath(); wheelCtx.fillStyle = colors[i%colors.length];
+                 wheelCtx.moveTo(0,0); wheelCtx.arc(0,0,150,angle, angle+arc); wheelCtx.fill();
+                 wheelCtx.save(); wheelCtx.translate(Math.cos(angle+arc/2)*100, Math.sin(angle+arc/2)*100);
+                 wheelCtx.rotate(angle+arc/2+Math.PI/2); wheelCtx.fillStyle="#fff"; wheelCtx.font="bold 12px Arial";
+                 let text = data[i].name.substring(0,5); wheelCtx.fillText(text, -wheelCtx.measureText(text).width/2, 0); wheelCtx.restore();
              }
              wheelCtx.restore();
         }
         function spinWheel(data) {
-            if(isSpinning) return;
-            isSpinning = true;
-            document.getElementById('wheel-msg').innerText = "命運轉動中...";
-            const winnerIndex = Math.floor(Math.random() * data.length);
-            const arc = 2*Math.PI / data.length;
-            const spins = 5 + Math.random() * 5;
-            const spinAngle = spins * 2 * Math.PI;
-            const segmentCenter = (winnerIndex * arc) + (arc/2);
-            const targetRotation = spinAngle - segmentCenter - (Math.PI/2);
-            let start = null;
-            function animate(timestamp) {
-                if(!start) start=timestamp;
-                const p = Math.min((timestamp-start)/4000, 1);
-                const ease = 1 - Math.pow(1-p, 3);
-                currentRotation = targetRotation * ease;
-                drawWheel(data);
-                if(p<1) requestAnimationFrame(animate);
-                else {
-                    isSpinning = false;
-                    closeWheel();
-                    selectedShop = data[winnerIndex];
-                    openModal();
-                }
+            if(isSpinning) return; isSpinning=true; document.getElementById('wheel-msg').innerText="命運轉動中...";
+            const winnerIdx = Math.floor(Math.random()*data.length);
+            const arc = 2*Math.PI/data.length; const spins = 5+Math.random()*5;
+            const targetRot = (spins*2*Math.PI) - ((winnerIdx*arc)+(arc/2)) - (Math.PI/2);
+            let start=null; 
+            function anim(ts) {
+                if(!start) start=ts; const p=Math.min((ts-start)/4000,1); const ease=1-Math.pow(1-p,3);
+                currentRotation = targetRot*ease; drawWheel(data);
+                if(p<1) requestAnimationFrame(anim);
+                else { isSpinning=false; closeWheel(); selectedShop=data[winnerIdx]; openModal(); }
             }
-            requestAnimationFrame(animate);
+            requestAnimationFrame(anim);
         }
-        
-        // --- History Logic ---
-        function saveToHistoryAndClose() {
-            if(!selectedShop) return;
-            historyData.unshift({ name: selectedShop.name, date: new Date().toLocaleDateString('zh-TW'), userRating: 0 });
-            localStorage.setItem('foodHistory', JSON.stringify(historyData));
-            closeModal();
-            Swal.fire({ icon: 'success', title: '已紀錄', text: '別忘了去紀錄打分數喔！', timer: 1500, showConfirmButton: false });
-        }
-        function rateHistoryItem(index, rating) {
-            historyData[index].userRating = rating;
-            localStorage.setItem('foodHistory', JSON.stringify(historyData));
-            openHistory();
-        }
-        function openHistory() {
-            const list = document.getElementById('history-list');
-            list.innerHTML = '';
-            if(historyData.length === 0) { list.innerHTML = `<div class="text-center text-gray-400 mt-10">還沒有紀錄喔</div>`; }
-            historyData.forEach((h, i) => {
-                let starsHtml = '';
-                for(let s=1; s<=5; s++) {
-                    const colorClass = s <= h.userRating ? 'text-yellow-400' : 'text-gray-300';
-                    starsHtml += `<i class="fa-solid fa-star text-lg ${colorClass} px-1" onclick="rateHistoryItem(${i}, ${s})"></i>`;
-                }
-                list.innerHTML += `
-                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                        <div class="flex justify-between items-start mb-2">
-                            <div><h3 class="font-bold text-gray-800">${h.name}</h3><div class="text-xs text-gray-400">${h.date}</div></div>
-                            <button onclick="deleteHistoryItem(${i})" class="text-gray-300 hover:text-red-500 p-1"><i class="fa-solid fa-trash"></i></button>
-                        </div>
-                        <div class="flex items-center"><span class="text-xs text-gray-500 mr-2">我的評分:</span><div class="star-rating flex">${starsHtml}</div></div>
-                    </div>`;
-            });
-            document.getElementById('history-modal').classList.remove('hidden', 'translate-y-full');
-            document.getElementById('history-modal').classList.add('translate-y-0');
-        }
-        function closeHistory() { document.getElementById('history-modal').classList.add('translate-y-full'); setTimeout(()=>document.getElementById('history-modal').classList.add('hidden'), 300); }
-        function deleteHistoryItem(index) { historyData.splice(index, 1); localStorage.setItem('foodHistory', JSON.stringify(historyData)); openHistory(); }
-        function clearHistory() { historyData=[]; localStorage.setItem('foodHistory', '[]'); openHistory(); }
         function shareShop() {
-            const text = `今天吃: ${selectedShop.name} https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedShop.name)}`;
-            navigator.clipboard.writeText(text).then(()=>Swal.fire('已複製分享文字', '', 'success'));
+            const t = `今天吃: ${selectedShop.name} https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedShop.name)}`;
+            navigator.clipboard.writeText(t).then(()=>Swal.fire('已複製', '', 'success'));
         }
     </script>
 </body>
