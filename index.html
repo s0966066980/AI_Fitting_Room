@@ -1,21 +1,25 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW" class="antialiased">
 <head>
     <meta charset="UTF-8">
-    <!-- 1. 鎖定縮放，UI 固定，適配手機瀏海 -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <!-- Viewport locked: No zoom allowed for native app feel -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>今天吃什麼？v0.8</title>
     
-    <!-- Tailwind CSS (支援 Dark Mode) -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
-            darkMode: 'media', // 自動跟隨系統設定
+            darkMode: 'media', // Automatically respects system settings
             theme: {
                 extend: {
                     colors: {
-                        darkbg: '#18181b', // Zinc-900
-                        darkcard: '#27272a', // Zinc-800
+                        dark: {
+                            bg: '#111827',
+                            card: '#1F2937',
+                            text: '#F3F4F6',
+                            sub: '#9CA3AF'
+                        }
                     }
                 }
             }
@@ -26,152 +30,129 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <!-- SweetAlert2 (Dark Theme compatible logic handled in JS) -->
+    <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <style>
         body {
             font-family: 'Noto Sans TC', sans-serif;
-            /* 禁止選取文字，更像 App */
-            -webkit-user-select: none;
-            user-select: none;
             -webkit-tap-highlight-color: transparent;
+            /* Smooth background transition for dark mode */
+            transition: background-color 0.3s, color 0.3s;
         }
-
-        /* 隱藏捲軸但保留功能 */
+        
+        /* Custom Scrollbar Hide */
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* Loading Animation */
+
+        /* Loader */
         .loader {
-            border: 3px solid #e5e7eb; /* gray-200 */
-            border-top: 3px solid #3B82F6; /* blue-500 */
+            border: 3px solid #e5e7eb; /* light gray */
+            border-top: 3px solid #3B82F6; /* blue */
             border-radius: 50%;
-            width: 30px; height: 30px;
+            width: 24px; height: 24px;
             animation: spin 1s linear infinite;
-        }
-        @media (prefers-color-scheme: dark) {
-            .loader { border-color: #3f3f46; border-top-color: #60a5fa; }
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* Card Animation */
-        .card-anim { transition: transform 0.15s ease-out, background-color 0.2s; }
-        .card-anim:active { transform: scale(0.97); }
-
-        /* Custom Toggle Switch */
+        /* Toggle Switch */
         .toggle-checkbox:checked { right: 0; border-color: #3B82F6; }
         .toggle-checkbox:checked + .toggle-label { background-color: #3B82F6; }
         
-        /* Wheel Styling */
-        #wheel-canvas { transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99); }
-        .arrow-down {
-            width: 0; height: 0; 
-            border-left: 15px solid transparent;
-            border-right: 15px solid transparent;
-            border-top: 25px solid #ef4444;
-            position: absolute; top: -5px; left: 50%;
-            transform: translateX(-50%); z-index: 20;
-            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));
-        }
-
-        /* Sub-category chips */
+        /* Chips */
         .chip { transition: all 0.2s; white-space: nowrap; }
-        .chip.active { background-color: #3B82F6; color: white; border-color: transparent; }
         
-        /* Dark Mode Chips Override */
-        @media (prefers-color-scheme: dark) {
-            .chip { background-color: #27272a; border-color: #3f3f46; color: #a1a1aa; }
-            .chip.active { background-color: #2563eb; color: white; border-color: transparent; }
-        }
-
         /* Map & Photos */
-        #mini-map { width: 100%; height: 180px; background-color: #e5e7eb; border-radius: 0.5rem; margin-bottom: 1rem; }
-        @media (prefers-color-scheme: dark) { #mini-map { background-color: #27272a; } }
-        
-        .photo-thumb { width: 80px; height: 80px; object-fit: cover; border-radius: 0.5rem; }
+        #mini-map { width: 100%; height: 180px; background-color: #eee; border-radius: 0.75rem; margin-bottom: 1rem; }
+        .photo-thumb { width: 80px; height: 80px; object-fit: cover; border-radius: 0.75rem; }
+
+        /* Card Animation */
+        .card-anim { transition: transform 0.1s, box-shadow 0.1s; }
+        .card-anim:active { transform: scale(0.97); }
+
+        /* Dark Mode Specifics handled by Tailwind 'dark:' classes */
     </style>
 </head>
-<body class="bg-gray-100 dark:bg-darkbg text-gray-800 dark:text-gray-100 h-screen flex flex-col overflow-hidden transition-colors duration-300">
+<body class="bg-gray-50 dark:bg-gray-900 dark:text-gray-100 h-screen flex flex-col overflow-hidden">
 
     <!-- Header -->
-    <header class="bg-white dark:bg-darkcard shadow-sm z-20 px-4 py-3 flex justify-between items-center transition-colors duration-300">
+    <header class="bg-white dark:bg-gray-800 shadow-sm z-20 px-4 py-3 flex justify-between items-center transition-colors duration-300">
         <div class="flex items-center gap-3">
-            <button onclick="refreshSearch()" class="bg-blue-50 dark:bg-gray-700 text-blue-600 dark:text-blue-400 w-9 h-9 rounded-full flex items-center justify-center hover:bg-blue-100 dark:hover:bg-gray-600 transition shadow-sm active:scale-90" title="重新整理">
+            <button onclick="refreshSearch()" class="bg-blue-50 dark:bg-gray-700 text-blue-600 dark:text-blue-400 w-10 h-10 rounded-full flex items-center justify-center hover:bg-blue-100 dark:hover:bg-gray-600 transition shadow-sm active:scale-90" title="重新整理">
                 <i class="fa-solid fa-arrows-rotate"></i>
             </button>
             <div>
-                <h1 class="text-lg font-bold tracking-wide">今天吃什麼</h1>
+                <h1 class="text-lg font-bold text-gray-800 dark:text-white">今天吃什麼</h1>
                 <p class="text-xs text-gray-500 dark:text-gray-400">Hi ，<span id="date-display"></span></p>
             </div>
         </div>
-        <div class="flex gap-3">
-             <button onclick="openApiKeySettings()" class="bg-gray-100 dark:bg-gray-700 p-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition">
-                <i class="fa-solid fa-shield-halved"></i>
+        <div class="flex gap-2">
+             <button onclick="openApiKeySettings()" class="bg-gray-100 dark:bg-gray-700 p-2.5 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition">
+                <i class="fa-solid fa-key"></i>
             </button>
-            <button onclick="openFavorites()" class="bg-pink-50 dark:bg-gray-700 p-2 rounded-full text-pink-500 hover:bg-pink-100 dark:hover:bg-gray-600 transition relative">
+            <button onclick="openFavorites()" class="bg-pink-50 dark:bg-gray-700 p-2.5 rounded-full text-pink-500 hover:bg-pink-100 dark:hover:bg-gray-600 transition relative">
                 <i class="fa-solid fa-heart"></i>
             </button>
         </div>
     </header>
 
     <!-- Controls Area -->
-    <div class="bg-white dark:bg-darkcard border-b border-gray-200 dark:border-gray-700 pb-2 z-10 transition-colors duration-300">
+    <div class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 pb-2 z-10 transition-colors duration-300">
         
-        <!-- Range & Filter Row -->
+        <!-- Distance & Toggle Row -->
         <div class="px-4 py-3" id="range-container">
             <div class="flex justify-between items-center mb-2">
-                <div class="flex flex-col">
-                    <span class="text-xs text-gray-500 dark:text-gray-400">搜尋半徑</span>
-                    <span id="range-value" class="font-bold text-blue-600 dark:text-blue-400 text-sm">500 公尺</span>
+                <div class="flex items-baseline gap-2">
+                    <span class="text-xs text-gray-500 dark:text-gray-400">距離</span>
+                    <span id="range-value" class="font-bold text-blue-600 dark:text-blue-400 text-sm">500 m</span>
                 </div>
                 
                 <!-- Open Now Toggle -->
-                <div class="flex items-center">
-                    <label for="open-now-toggle" class="flex items-center cursor-pointer relative">
-                        <div class="relative">
-                            <input type="checkbox" id="open-now-toggle" class="sr-only" onchange="toggleOpenNow()">
-                            <div class="block bg-gray-200 dark:bg-gray-600 w-10 h-6 rounded-full toggle-bg transition"></div>
-                            <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition transform shadow-sm" id="toggle-dot"></div>
-                        </div>
-                        <div class="ml-2 text-xs font-bold text-gray-600 dark:text-gray-300">只看營業中</div>
-                    </label>
-                </div>
+                <label for="open-now-toggle" class="flex items-center cursor-pointer relative select-none">
+                    <div class="relative">
+                        <input type="checkbox" id="open-now-toggle" class="sr-only" onchange="toggleOpenNow()">
+                        <div class="block bg-gray-200 dark:bg-gray-600 w-9 h-5 rounded-full toggle-bg transition"></div>
+                        <div class="dot absolute left-1 top-1 bg-white w-3 h-3 rounded-full transition transform" id="toggle-dot"></div>
+                    </div>
+                    <div class="ml-2 text-xs font-medium text-gray-600 dark:text-gray-300">只看營業中</div>
+                </label>
             </div>
-            <input type="range" id="distance-range" min="100" max="2000" step="100" value="500" class="w-full accent-blue-500 dark:accent-blue-400 h-1 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer">
+            
+            <!-- Dynamic Color Slider -->
+            <input type="range" id="distance-range" min="100" max="1000" step="100" value="500" 
+                   class="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
         </div>
 
         <!-- Main Categories -->
         <div class="px-4 flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-hide pb-2">
-            <button onclick="setMode('restaurant')" id="btn-restaurant" class="filter-btn px-4 py-1.5 rounded-full text-sm font-medium bg-blue-500 text-white shadow-md transition">
+            <button onclick="setMode('restaurant')" id="btn-restaurant" class="filter-btn px-4 py-2 rounded-xl text-sm font-bold bg-blue-500 text-white shadow-md transition transform active:scale-95">
                 附近美食
             </button>
-            <button onclick="setMode('date')" id="btn-date" class="filter-btn px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 transition">
-                💕 下午茶約會
+            <button onclick="setMode('date')" id="btn-date" class="filter-btn px-4 py-2 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 transition transform active:scale-95">
+                💕 約會下午茶
             </button>
-            <button onclick="askCustomSearch()" id="btn-custom" class="filter-btn px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 transition border border-gray-200 dark:border-gray-600">
+            <button onclick="askCustomSearch()" id="btn-custom" class="filter-btn px-4 py-2 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 transition transform active:scale-95">
                 🔍 自訂
             </button>
         </div>
 
-        <!-- Sub Categories (Updated with new categories) -->
-        <div id="sub-categories" class="px-4 flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-hide pb-1 mt-1 transition-all duration-300">
-            <button onclick="setSubCategory('all')" class="chip active px-3 py-1 rounded-full text-xs font-medium border border-blue-100 bg-blue-50 text-blue-600">全部</button>
-            <button onclick="setSubCategory('小吃')" class="chip px-3 py-1 rounded-full text-xs font-medium border border-gray-200 text-gray-600 bg-white">🥟 小吃</button>
-            <button onclick="setSubCategory('牛排')" class="chip px-3 py-1 rounded-full text-xs font-medium border border-gray-200 text-gray-600 bg-white">🥩 牛排</button>
-            <button onclick="setSubCategory('日式料理')" class="chip px-3 py-1 rounded-full text-xs font-medium border border-gray-200 text-gray-600 bg-white">🍣 日料</button>
-            <button onclick="setSubCategory('韓式料理')" class="chip px-3 py-1 rounded-full text-xs font-medium border border-gray-200 text-gray-600 bg-white">🥘 韓食</button>
-            <button onclick="setSubCategory('火鍋')" class="chip px-3 py-1 rounded-full text-xs font-medium border border-gray-200 text-gray-600 bg-white">🍲 火鍋</button>
-            <button onclick="setSubCategory('燒烤')" class="chip px-3 py-1 rounded-full text-xs font-medium border border-gray-200 text-gray-600 bg-white">🔥 燒烤</button>
-            <button onclick="setSubCategory('居酒屋')" class="chip px-3 py-1 rounded-full text-xs font-medium border border-gray-200 text-gray-600 bg-white">🍺 居酒屋</button>
-            <button onclick="setSubCategory('炸物')" class="chip px-3 py-1 rounded-full text-xs font-medium border border-gray-200 text-gray-600 bg-white">🍗 炸物</button>
+        <!-- Sub Categories (Chips) -->
+        <div id="sub-categories" class="px-4 flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-hide pb-2 mt-1">
+            <button onclick="setSubCategory('all')" class="chip active px-3 py-1.5 rounded-full text-xs font-medium border border-blue-100 bg-blue-50 text-blue-600 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-800">全部</button>
+            <button onclick="setSubCategory('小吃')" class="chip px-3 py-1.5 rounded-full text-xs font-medium border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800">🍢 小吃</button>
+            <button onclick="setSubCategory('牛排')" class="chip px-3 py-1.5 rounded-full text-xs font-medium border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800">🥩 牛排</button>
+            <button onclick="setSubCategory('日式料理')" class="chip px-3 py-1.5 rounded-full text-xs font-medium border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800">🍱 日料</button>
+            <button onclick="setSubCategory('韓式料理')" class="chip px-3 py-1.5 rounded-full text-xs font-medium border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800">🥘 韓食</button>
+            <button onclick="setSubCategory('火鍋')" class="chip px-3 py-1.5 rounded-full text-xs font-medium border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800">🍲 火鍋</button>
+            <button onclick="setSubCategory('炸物')" class="chip px-3 py-1.5 rounded-full text-xs font-medium border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800">🍗 炸物</button>
+            <button onclick="setSubCategory('居酒屋')" class="chip px-3 py-1.5 rounded-full text-xs font-medium border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800">🍺 居酒屋</button>
         </div>
         
         <!-- Keyword Badge -->
         <div id="keyword-badge" class="hidden px-4 py-1 mt-1">
-            <span class="text-xs font-bold text-blue-600 bg-blue-100 dark:bg-blue-900 dark:text-blue-300 px-2 py-1 rounded-md">
-                關鍵字：<span id="current-keyword-text"></span>
-                <button onclick="setMode('restaurant')" class="ml-2 text-blue-400 hover:text-blue-700 dark:hover:text-blue-200"><i class="fa-solid fa-xmark"></i></button>
+            <span class="text-xs font-bold text-blue-600 bg-blue-100 dark:bg-blue-900 dark:text-blue-300 px-3 py-1 rounded-lg inline-flex items-center">
+                <span>搜尋：<span id="current-keyword-text"></span></span>
+                <button onclick="setMode('restaurant')" class="ml-2 w-4 h-4 rounded-full bg-blue-200 text-blue-700 flex items-center justify-center hover:bg-blue-300"><i class="fa-solid fa-xmark text-[10px]"></i></button>
             </span>
         </div>
     </div>
@@ -180,28 +161,27 @@
     <main class="flex-1 overflow-y-auto p-4 relative" id="main-container">
         
         <!-- Start Screen -->
-        <div id="start-screen" class="flex flex-col items-center justify-center h-full text-center space-y-6 pt-10">
+        <div id="start-screen" class="flex flex-col items-center justify-center h-full text-center space-y-6 pt-10 pb-20">
             <div class="relative">
-                <div class="w-32 h-32 bg-blue-100 dark:bg-gray-800 rounded-full flex items-center justify-center animate-bounce">
-                    <i class="fa-solid fa-map-location-dot text-5xl text-blue-500 dark:text-blue-400"></i>
+                <div class="w-28 h-28 bg-blue-50 dark:bg-gray-800 rounded-full flex items-center justify-center animate-bounce shadow-inner">
+                    <i class="fa-solid fa-utensils text-4xl text-blue-500 dark:text-blue-400"></i>
                 </div>
-                <div class="absolute top-0 left-0 w-32 h-32 bg-blue-400 dark:bg-blue-600 rounded-full opacity-20 animate-ping"></div>
+                <div class="absolute top-0 left-0 w-28 h-28 bg-blue-400 rounded-full opacity-10 animate-ping"></div>
             </div>
             <div>
-                <h2 class="text-xl font-bold text-gray-800 dark:text-gray-100">美食雷達 v0.8</h2>
-                <p class="text-gray-500 dark:text-gray-400 mt-2 text-sm px-8">您的資料安全無虞<br>請設定 Key 後開始探索 20 家精選好店</p>
-                <p id="api-status" class="text-xs text-red-500 dark:text-red-400 mt-2 font-bold hidden"><i class="fa-solid fa-lock"></i> 尚未設定金鑰 (僅存於本地)</p>
+                <h2 class="text-xl font-bold text-gray-800 dark:text-white">今天吃什麼？</h2>
+                <p class="text-gray-500 dark:text-gray-400 mt-2 text-sm px-8">隨機精選 20 家好店<br>設定好距離，馬上開吃！</p>
+                <p id="api-status" class="text-xs text-red-500 mt-2 font-bold hidden bg-red-50 px-2 py-1 rounded inline-block">⚠️ 請先設定 API Key</p>
             </div>
-            <button onclick="getLocation()" class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold py-3 px-10 rounded-xl shadow-lg transform transition hover:scale-105 active:scale-95 flex items-center text-lg">
-                <i class="fa-solid fa-magnifying-glass-location mr-2"></i> 開始搜尋
+            <button onclick="getLocation()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-10 rounded-2xl shadow-lg shadow-blue-500/30 transform transition active:scale-95 flex items-center text-lg">
+                <i class="fa-solid fa-location-arrow mr-2"></i> 搜尋美食
             </button>
         </div>
 
         <!-- Loading -->
         <div id="loading-screen" class="hidden flex flex-col items-center justify-center h-full pt-20">
-            <div class="loader mb-4"></div>
-            <p class="text-gray-600 dark:text-gray-300 font-medium">雷達掃描中...</p>
-            <p class="text-gray-400 dark:text-gray-500 text-xs mt-2">尋找最佳選擇</p>
+            <div class="loader mb-4 border-t-blue-500"></div>
+            <p class="text-gray-600 dark:text-gray-300 font-medium">Google 正在幫你掃描...</p>
         </div>
 
         <!-- Results -->
@@ -211,17 +191,17 @@
 
     <!-- FAB (Dice) -->
     <div id="fab-container" class="hidden absolute bottom-6 right-6 z-20">
-        <button onclick="openWheel()" class="bg-gray-800 dark:bg-blue-600 text-white w-16 h-16 rounded-full shadow-xl flex items-center justify-center text-2xl hover:bg-gray-700 dark:hover:bg-blue-500 transition transform hover:rotate-12 active:scale-90 ring-4 ring-white dark:ring-gray-700">
+        <button onclick="openWheel()" class="bg-gray-800 dark:bg-blue-600 text-white w-14 h-14 rounded-full shadow-xl shadow-gray-400/50 dark:shadow-blue-900/50 flex items-center justify-center text-xl hover:bg-gray-700 dark:hover:bg-blue-500 transition transform hover:rotate-12 active:scale-90">
             <i class="fa-solid fa-dice"></i>
         </button>
     </div>
 
     <!-- Wheel Modal -->
-    <div id="wheel-modal" class="fixed inset-0 bg-black bg-opacity-80 z-50 hidden flex flex-col items-center justify-center backdrop-blur-sm">
+    <div id="wheel-modal" class="fixed inset-0 bg-black/80 z-50 hidden flex flex-col items-center justify-center backdrop-blur-sm">
         <div class="relative w-80 h-80 mb-8">
-            <div class="arrow-down"></div>
+            <div class="arrow-down border-t-red-500"></div>
             <canvas id="wheel-canvas" width="320" height="320" class="w-full h-full drop-shadow-2xl"></canvas>
-            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white dark:bg-gray-800 rounded-full shadow-md z-10 flex items-center justify-center border-2 border-gray-200 dark:border-gray-600">
+            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full shadow-md z-10 flex items-center justify-center border-2 border-gray-200">
                 <div class="w-3 h-3 bg-orange-500 rounded-full"></div>
             </div>
         </div>
@@ -230,38 +210,38 @@
     </div>
 
     <!-- Result Modal -->
-    <div id="modal" class="fixed inset-0 bg-black bg-opacity-60 z-[60] hidden flex items-center justify-center p-4 transition-opacity duration-300">
-        <div class="bg-white dark:bg-darkcard rounded-2xl w-full max-w-sm p-5 shadow-2xl transform transition-all scale-95 opacity-0 flex flex-col max-h-[90vh]" id="modal-content">
+    <div id="modal" class="fixed inset-0 bg-black/60 z-[60] hidden flex items-center justify-center p-4 transition-opacity duration-300">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl transform transition-all scale-95 opacity-0 flex flex-col max-h-[90vh]" id="modal-content">
             <div class="relative flex-1 overflow-y-auto scrollbar-hide">
-                <button onclick="closeModal()" class="absolute top-0 right-0 text-gray-400 dark:text-gray-500 p-2 z-10 bg-white dark:bg-darkcard rounded-full"><i class="fa-solid fa-xmark text-xl"></i></button>
+                <button onclick="closeModal()" class="absolute top-0 right-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 z-10"><i class="fa-solid fa-xmark text-xl"></i></button>
                 
-                <h2 id="modal-shop-name" class="text-xl font-black text-gray-800 dark:text-gray-100 mb-1 pr-8 leading-tight">店家名稱</h2>
+                <h2 id="modal-shop-name" class="text-xl font-black text-gray-800 dark:text-white mb-1 pr-8 leading-tight">店家名稱</h2>
                 
-                <div class="flex items-center gap-2 mb-2">
+                <div class="flex flex-wrap items-center gap-2 mb-3">
                     <span id="modal-shop-rating" class="text-orange-500 font-bold text-sm"></span>
-                    <span id="modal-shop-price" class="text-gray-600 dark:text-gray-300 text-xs font-mono bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded"></span>
+                    <span id="modal-shop-price" class="text-gray-500 dark:text-gray-400 text-xs font-medium"></span>
                     <span id="modal-shop-status" class="text-xs font-bold px-2 py-0.5 rounded border"></span>
                 </div>
                 
                 <!-- Detailed Opening Hours -->
-                <div id="modal-hours-container" class="mb-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-sm text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700">
+                <div id="modal-hours-container" class="mb-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl text-sm border border-gray-100 dark:border-gray-700">
                     <div class="font-bold mb-1 flex items-center text-blue-600 dark:text-blue-400"><i class="fa-regular fa-clock mr-2"></i> <span id="modal-hours-title">營業時間</span></div>
-                    <div id="modal-hours-text" class="pl-6 text-gray-500 dark:text-gray-400">載入中...</div>
+                    <div id="modal-hours-text" class="pl-6 text-gray-500 dark:text-gray-300">讀取中...</div>
                 </div>
 
-                <p id="modal-shop-vicinity" class="text-xs text-gray-500 dark:text-gray-400 mb-3 truncate">地址資訊</p>
+                <p id="modal-shop-vicinity" class="text-xs text-gray-400 mb-4 truncate">地址資訊</p>
 
                 <!-- Map -->
-                <div id="mini-map"></div>
+                <div id="mini-map" class="dark:grayscale-[30%]"></div>
 
                 <div class="grid grid-cols-2 gap-3 mt-2">
-                    <button id="btn-toggle-fav" onclick="toggleFavorite()" class="col-span-2 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition border border-gray-200 dark:border-gray-600">
+                    <button id="btn-toggle-fav" onclick="toggleFavorite()" class="col-span-2 py-3 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-200 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition">
                         <i class="fa-regular fa-heart mr-1"></i> 加入最愛
                     </button>
-                    <button onclick="shareShop()" class="py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition">
-                        <i class="fa-brands fa-line text-green-600"></i> 分享
+                    <button onclick="shareShop()" class="py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition">
+                        <i class="fa-solid fa-share-nodes mr-1"></i> 分享
                     </button>
-                    <button onclick="openGoogleMapsNav()" class="py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg hover:bg-blue-700 transition flex items-center justify-center">
+                    <button onclick="openGoogleMapsNav()" class="py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition flex items-center justify-center">
                         <i class="fa-solid fa-diamond-turn-right mr-2"></i> 去導航
                     </button>
                 </div>
@@ -270,28 +250,21 @@
     </div>
 
     <!-- Favorites Modal -->
-    <div id="fav-modal" class="fixed inset-0 bg-white dark:bg-darkcard z-[70] hidden flex flex-col transition-transform duration-300 translate-y-full">
-        <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-darkcard">
-            <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100"><i class="fa-solid fa-heart text-pink-500 mr-2"></i>我的最愛 & 評分</h2>
-            <button onclick="closeFavorites()" class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-400">
+    <div id="fav-modal" class="fixed inset-0 bg-white dark:bg-gray-900 z-[70] hidden flex flex-col transition-transform duration-300 translate-y-full">
+        <div class="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+            <h2 class="text-lg font-bold text-gray-800 dark:text-white"><i class="fa-solid fa-heart text-pink-500 mr-2"></i>我的最愛 & 評分</h2>
+            <button onclick="closeFavorites()" class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-300">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
-        <div class="flex-1 overflow-y-auto p-4 space-y-4" id="fav-list">
-            <!-- Items injected here -->
-        </div>
-        <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-darkcard text-center">
-            <button onclick="clearFavorites()" class="text-red-500 text-sm font-medium">清除所有最愛</button>
+        <div class="flex-1 overflow-y-auto p-4 space-y-3" id="fav-list"></div>
+        <div class="p-4 border-t border-gray-100 dark:border-gray-800 text-center">
+            <button onclick="clearFavorites()" class="text-red-500 text-sm font-medium hover:text-red-600">清除所有最愛</button>
         </div>
     </div>
 
     <script>
-        // --- 1. Security & Configuration ---
-        // API Key is strictly retrieved from LocalStorage to ensure no hardcoded secrets exist in source code.
-        let apiKey = localStorage.getItem('googleMapsApiKey') || '';
-        let scriptLoaded = false;
-
-        // --- Global Variables ---
+        // --- System Setup ---
         let map, placesService;
         let currentUserLocation = null;
         let allFetchedShops = [];
@@ -303,71 +276,67 @@
         let currentRadius = 500;
         let onlyOpenNow = false;
         let myFavorites = JSON.parse(localStorage.getItem('myFavorites')) || [];
+        let apiKey = localStorage.getItem('googleMapsApiKey') || '';
+        let scriptLoaded = false;
         
-        // Wheel vars
+        // --- Wheel Vars ---
         let wheelCanvas = document.getElementById('wheel-canvas');
         let wheelCtx = wheelCanvas.getContext('2d');
         let isSpinning = false;
         let currentRotation = 0;
 
-        // --- Dark Mode Detection ---
-        const isDarkMode = () => window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-
         // --- Init ---
         document.getElementById('date-display').innerText = new Date().toLocaleDateString('zh-TW', { month: 'long', day: 'numeric', weekday: 'short' });
-        
-        if(!apiKey) {
-            document.getElementById('api-status').classList.remove('hidden');
-        } else {
-            loadGoogleMapsScript();
-        }
+        if(!apiKey) document.getElementById('api-status').classList.remove('hidden');
+        else loadGoogleMapsScript();
 
-        // --- 2. API Key Management (Secure) ---
-        async function openApiKeySettings() {
-            const { value: key } = await Swal.fire({
-                title: '設定安全金鑰',
-                text: '您的金鑰僅儲存於本地瀏覽器，不會上傳至任何伺服器。',
-                input: 'text',
-                inputValue: apiKey,
-                inputPlaceholder: 'AIzaSy...',
-                showCancelButton: true,
-                confirmButtonText: '安全儲存',
-                background: isDarkMode() ? '#27272a' : '#fff',
-                color: isDarkMode() ? '#fff' : '#000'
-            });
-            if (key !== undefined) { // Allow clearing key with empty string
-                apiKey = key;
-                localStorage.setItem('googleMapsApiKey', apiKey);
-                location.reload();
+        // --- Distance Color Logic ---
+        const distRange = document.getElementById('distance-range');
+        const rangeVal = document.getElementById('range-value');
+        
+        function updateDistanceColor(val) {
+            distRange.className = `w-full h-1.5 rounded-lg appearance-none cursor-pointer transition-colors duration-300`;
+            if (val <= 300) {
+                rangeVal.className = "font-bold text-green-500 text-sm";
+                distRange.classList.add('bg-green-200', 'accent-green-500');
+            } else if (val <= 700) {
+                rangeVal.className = "font-bold text-blue-500 text-sm";
+                distRange.classList.add('bg-blue-200', 'accent-blue-500');
+            } else {
+                rangeVal.className = "font-bold text-orange-500 text-sm";
+                distRange.classList.add('bg-orange-200', 'accent-orange-500');
             }
         }
 
+        distRange.addEventListener('input', (e) => {
+            currentRadius = parseInt(e.target.value);
+            rangeVal.innerText = currentRadius >= 1000 ? (currentRadius/1000) + " km" : currentRadius + " m";
+            updateDistanceColor(currentRadius);
+        });
+        distRange.addEventListener('change', () => { if(currentUserLocation) refreshSearch(); });
+        
+        // Initial Color
+        updateDistanceColor(500);
+
+        // --- API Key ---
+        async function openApiKeySettings() {
+            const { value: key } = await Swal.fire({ title: '設定 API Key', input: 'text', inputValue: apiKey, showCancelButton: true });
+            if (key) { apiKey = key; localStorage.setItem('googleMapsApiKey', apiKey); location.reload(); }
+        }
         function loadGoogleMapsScript() {
             if (scriptLoaded) return;
             const script = document.createElement('script');
             script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&language=zh-TW`;
             script.async = true; script.defer = true;
-            script.onload = () => { scriptLoaded = true; console.log("Google Maps SDK Ready"); };
-            script.onerror = () => {
-                document.getElementById('api-status').classList.remove('hidden');
-                document.getElementById('api-status').innerText = "金鑰無效或額度不足";
-            };
+            script.onload = () => { scriptLoaded = true; };
             document.head.appendChild(script);
         }
 
-        // --- Controls ---
-        document.getElementById('distance-range').addEventListener('change', (e) => {
-            currentRadius = e.target.value;
-            if(currentUserLocation) refreshSearch();
-        });
-        document.getElementById('distance-range').addEventListener('input', (e) => {
-            rangeValue.innerText = e.target.value >= 1000 ? (e.target.value/1000) + " 公里" : e.target.value + " 公尺";
-        });
-
+        // --- Toggles & Modes ---
         function toggleOpenNow() {
             onlyOpenNow = document.getElementById('open-now-toggle').checked;
-            const bg = document.querySelector('.toggle-bg');
             const dot = document.getElementById('toggle-dot');
+            const bg = document.querySelector('.toggle-bg');
             if (onlyOpenNow) {
                 dot.classList.add('translate-x-4');
                 bg.classList.remove('bg-gray-200', 'dark:bg-gray-600');
@@ -386,54 +355,44 @@
             
             // UI Reset
             document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.className = "filter-btn px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition border border-gray-200 dark:border-gray-600";
+                btn.className = "filter-btn px-4 py-2 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 transition transform active:scale-95";
             });
             
             if (mode !== 'custom') {
-                document.getElementById(`btn-${mode}`).className = "filter-btn px-4 py-1.5 rounded-full text-sm font-medium bg-blue-500 text-white shadow-md transition border-transparent";
+                document.getElementById(`btn-${mode}`).className = "filter-btn px-4 py-2 rounded-xl text-sm font-bold bg-blue-500 text-white shadow-md transition transform active:scale-95";
             }
 
-            // Sub-cats visibility
-            const subCatDiv = document.getElementById('sub-categories');
+            // Sub Categories
             if (mode === 'restaurant') {
-                subCatDiv.classList.remove('hidden');
+                document.getElementById('sub-categories').classList.remove('hidden');
             } else {
-                subCatDiv.classList.add('hidden');
-                subCategory = 'all'; // reset
+                document.getElementById('sub-categories').classList.add('hidden');
+                subCategory = 'all';
             }
 
-            if (currentUserLocation) refreshSearch();
-            else getLocation();
+            if (currentUserLocation) refreshSearch(); else getLocation();
         }
 
         function setSubCategory(cat) {
             subCategory = cat;
             const chips = document.getElementById('sub-categories').querySelectorAll('button');
             chips.forEach(c => {
-                c.className = "chip px-3 py-1 rounded-full text-xs font-medium border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 bg-white dark:bg-darkcard";
+                c.className = "chip px-3 py-1.5 rounded-full text-xs font-medium border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800";
                 if(c.innerText.includes(cat) || (cat==='all' && c.innerText==='全部')) {
-                    c.className = "chip active px-3 py-1 rounded-full text-xs font-medium border border-blue-100 bg-blue-50 dark:bg-blue-600 text-blue-600 dark:text-white";
+                    c.className = "chip active px-3 py-1.5 rounded-full text-xs font-medium border border-blue-100 bg-blue-50 text-blue-600 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-800";
                 }
             });
             refreshSearch();
         }
 
         async function askCustomSearch() {
-            const { value: keyword } = await Swal.fire({ 
-                title: '想吃什麼？', 
-                input: 'text', 
-                showCancelButton: true,
-                background: isDarkMode() ? '#27272a' : '#fff',
-                color: isDarkMode() ? '#fff' : '#000'
-            });
+            const { value: keyword } = await Swal.fire({ title: '想吃什麼？', input: 'text', showCancelButton: true });
             if (keyword) {
                 currentCustomKeyword = keyword;
                 currentMode = 'custom';
                 document.getElementById('sub-categories').classList.add('hidden');
-                
-                // Reset buttons visually
-                document.querySelectorAll('.filter-btn').forEach(btn => btn.className = "filter-btn px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 transition border border-gray-200 dark:border-gray-600");
-                document.getElementById('btn-custom').className = "filter-btn px-4 py-1.5 rounded-full text-sm font-medium bg-blue-500 text-white shadow-md transition border-transparent";
+                document.querySelectorAll('.filter-btn').forEach(btn => btn.className = "filter-btn px-4 py-2 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 transition");
+                document.getElementById('btn-custom').className = "filter-btn px-4 py-2 rounded-xl text-sm font-bold bg-blue-500 text-white shadow-md transition";
                 
                 document.getElementById('keyword-badge').classList.remove('hidden');
                 document.getElementById('current-keyword-text').innerText = keyword;
@@ -450,27 +409,25 @@
             map = new google.maps.Map(mapDiv, { center: {lat:0, lng:0}, zoom: 15 });
             placesService = new google.maps.places.PlacesService(map);
 
-            startScreen.classList.add('hidden');
-            loadingScreen.classList.remove('hidden');
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('loading-screen').classList.remove('hidden');
 
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
                     currentUserLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
                     fetchShops();
                 },
-                () => { loadingScreen.classList.add('hidden'); startScreen.classList.remove('hidden'); }
+                () => { document.getElementById('loading-screen').classList.add('hidden'); document.getElementById('start-screen').classList.remove('hidden'); }
             );
         }
 
         function refreshSearch() {
-            if(!currentUserLocation) getLocation();
-            else fetchShops();
+            if(!currentUserLocation) getLocation(); else fetchShops();
         }
 
-        // --- 3. Enhanced Search Logic ---
         function fetchShops() {
-            loadingScreen.classList.remove('hidden');
-            resultsList.classList.add('hidden');
+            document.getElementById('loading-screen').classList.remove('hidden');
+            document.getElementById('results-list').classList.add('hidden');
             document.getElementById('fab-container').classList.add('hidden');
 
             let request = {
@@ -479,16 +436,18 @@
                 type: 'restaurant' 
             };
 
-            if (currentMode === 'cafe') {
-                request.type = ['cafe', 'bakery']; 
-                request.keyword = '甜點 OR 咖啡 OR 下午茶';
+            if (currentMode === 'date') {
+                request.type = ['cafe', 'bakery'];
+                request.keyword = '甜點 OR 咖啡 OR 蛋糕';
             } else if (currentMode === 'custom') {
                 request.keyword = currentCustomKeyword;
                 delete request.type;
             } else if (currentMode === 'restaurant') {
                 if (subCategory && subCategory !== 'all') {
-                    // Specific sub-categories
-                    request.keyword = subCategory;
+                    // Specific logic for separation
+                    if (subCategory === '日式料理') request.keyword = '日式料理 OR 壽司 OR 拉麵';
+                    else if (subCategory === '韓式料理') request.keyword = '韓式料理 OR 韓式烤肉 OR 泡菜';
+                    else request.keyword = subCategory;
                 }
             }
 
@@ -497,112 +456,96 @@
                     allFetchedShops = results;
                     processAndRenderShops();
                 } else {
-                    loadingScreen.classList.add('hidden');
-                    resultsList.classList.remove('hidden');
-                    resultsList.innerHTML = `<div class="text-center mt-10 text-gray-400">找不到店家 (${status})</div>`;
+                    document.getElementById('loading-screen').classList.add('hidden');
+                    document.getElementById('results-list').classList.remove('hidden');
+                    document.getElementById('results-list').innerHTML = `<div class="text-center mt-10 text-gray-400 dark:text-gray-500">找不到店家 (${status})</div>`;
                 }
             });
         }
 
         function processAndRenderShops() {
-            // Filter
             let filtered = allFetchedShops.filter(shop => {
                 if (onlyOpenNow) return shop.opening_hours && shop.opening_hours.open_now;
                 return true;
             });
 
-            // Decorate
             filtered = filtered.map(shop => {
                 const dist = calculateDistance(currentUserLocation.lat, currentUserLocation.lng, shop.geometry.location.lat(), shop.geometry.location.lng());
                 shop.distanceText = dist < 1000 ? `${Math.round(dist)} m` : `${(dist/1000).toFixed(1)} km`;
                 shop.isFav = myFavorites.some(fav => fav.place_id === shop.place_id);
-                
-                // 6. Price Level Logic
-                // shop.price_level: 0 (Free), 1 ($), 2 ($$), 3 ($$$), 4 ($$$$)
-                if (shop.price_level !== undefined) {
-                    shop.priceText = '$'.repeat(shop.price_level);
-                } else {
-                    shop.priceText = '';
-                }
-                
+                shop.priceSymbol = '💰'.repeat(shop.price_level || 0) || '';
                 return shop;
             });
 
-            // Shuffle & Slice
             filtered.sort(() => 0.5 - Math.random());
             displayedShops = filtered.slice(0, 20);
-
             renderUI();
         }
 
         function renderUI() {
-            loadingScreen.classList.add('hidden');
-            resultsList.classList.remove('hidden');
-            resultsList.innerHTML = '';
+            document.getElementById('loading-screen').classList.add('hidden');
+            const list = document.getElementById('results-list');
+            list.classList.remove('hidden');
+            list.innerHTML = '';
             document.getElementById('fab-container').classList.remove('hidden');
 
             const infoDiv = document.createElement('div');
             infoDiv.className = "px-4 py-2 text-xs text-gray-500 dark:text-gray-400 flex justify-between";
-            infoDiv.innerHTML = `<span>隨機推薦 ${displayedShops.length} 家</span> <span class="text-blue-500">Google Data</span>`;
-            resultsList.appendChild(infoDiv);
+            infoDiv.innerHTML = `<span>隨機精選 ${displayedShops.length} 家</span> <span>Google Data</span>`;
+            list.appendChild(infoDiv);
 
             if(displayedShops.length === 0) {
-                resultsList.innerHTML += `<div class="text-center mt-10 text-gray-400">沒有符合條件的店家</div>`;
+                list.innerHTML += `<div class="text-center mt-10 text-gray-400 dark:text-gray-500">沒有符合條件的店家</div>`;
                 return;
             }
 
             displayedShops.forEach(shop => {
                 const card = document.createElement('div');
-                card.className = 'bg-white dark:bg-darkcard p-3 rounded-xl shadow-sm mx-4 mb-3 flex items-start gap-3 cursor-pointer card-anim border border-gray-100 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-500 relative';
+                card.className = 'bg-white dark:bg-gray-800 p-3 rounded-2xl shadow-sm mx-4 mb-3 flex items-start gap-3 cursor-pointer card-anim border border-gray-100 dark:border-gray-700 hover:border-blue-300 relative';
                 
                 let photoUrl = 'https://via.placeholder.com/80?text=Food';
                 if (shop.photos && shop.photos.length > 0) photoUrl = shop.photos[0].getUrl({maxWidth:200, maxHeight:200});
                 else if (shop.icon) photoUrl = shop.icon;
 
-                const rating = shop.rating ? `<span class="text-orange-500 font-bold text-xs"><i class="fa-solid fa-star"></i> ${shop.rating}</span>` : '<span class="text-xs text-gray-400">無評分</span>';
+                const rating = shop.rating ? `<span class="text-orange-400 font-bold text-xs"><i class="fa-solid fa-star"></i> ${shop.rating}</span>` : '<span class="text-xs text-gray-400">無評分</span>';
                 
-                // Status
-                let statusHtml = '';
+                // Smart Icon Logic for Subcategories
+                let typeIcon = '';
+                const cats = JSON.stringify(shop.types);
+                // Using Keywords or Types
+                if(subCategory === '日式料理' || cats.includes('sushi') || shop.name.includes('壽司') || shop.name.includes('日式')) typeIcon = '🍱';
+                else if(subCategory === '韓式料理' || shop.name.includes('韓')) typeIcon = '🥘';
+                else if(subCategory === '牛排' || shop.name.includes('牛排')) typeIcon = '🥩';
+                else if(subCategory === '小吃' || shop.name.includes('小吃')) typeIcon = '🍢';
+                else if(subCategory === '炸物') typeIcon = '🍗';
+                
                 const isOpen = shop.opening_hours ? shop.opening_hours.open_now : null;
-                if (isOpen === true) statusHtml = `<span class="text-xs text-green-600 dark:text-green-400 font-bold ml-2">● 營業中</span>`;
-                else if (isOpen === false) statusHtml = `<span class="text-xs text-red-500 dark:text-red-400 font-bold ml-2">● 休息中</span>`;
+                const statusColor = isOpen === true ? 'bg-green-500' : (isOpen === false ? 'bg-red-500' : 'bg-gray-400');
                 
-                // Price
-                let priceHtml = shop.priceText ? `<span class="text-xs text-gray-500 dark:text-gray-400 ml-1">· ${shop.priceText}</span>` : '';
-
-                // Fav Icon
-                let favHtml = shop.isFav ? `<i class="fa-solid fa-heart text-pink-500 absolute top-3 right-3 text-lg drop-shadow-sm"></i>` : '';
-
-                // 2. Custom Icons based on logic or name
-                // Default: Utensils
-                let typeIcon = 'fa-utensils';
-                let t = shop.name + (shop.types ? shop.types.join('') : '');
+                let favHtml = shop.isFav ? `<i class="fa-solid fa-heart text-pink-500 absolute top-3 right-3 text-lg drop-shadow-sm animate-pulse"></i>` : '';
                 
-                // Logic for distinct icons
-                if (currentMode === 'restaurant' && subCategory === '日式料理') typeIcon = 'fa-fish'; // Sushi
-                else if (currentMode === 'restaurant' && subCategory === '韓式料理') typeIcon = 'fa-bowl-rice'; // Rice bowl
-                else if (currentMode === 'restaurant' && subCategory === '牛排') typeIcon = 'fa-drumstick-bite'; // Steak/Meat
-                else if (currentMode === 'restaurant' && subCategory === '小吃') typeIcon = 'fa-cookie-bite'; // Snack
-                else if (currentMode === 'cafe') typeIcon = 'fa-mug-hot';
-                else if (currentMode === 'restaurant' && subCategory === '酒吧') typeIcon = 'fa-martini-glass';
+                const priceHtml = shop.price_level ? `<span class="text-xs text-gray-500 dark:text-gray-400 ml-2">${'💰'.repeat(shop.price_level)}</span>` : '';
 
                 card.innerHTML = `
-                    <img src="${photoUrl}" class="photo-thumb bg-gray-100 dark:bg-gray-700 flex-shrink-0">
-                    <div class="flex-1 min-w-0 pt-1">
-                        <div class="flex justify-between items-start mb-1 pr-6">
-                             <h3 class="font-bold text-gray-800 dark:text-gray-100 truncate text-sm">${shop.name}</h3>
+                    <div class="relative">
+                        <img src="${photoUrl}" class="photo-thumb bg-gray-100 dark:bg-gray-700 flex-shrink-0">
+                        <div class="absolute bottom-1 right-1 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${statusColor}"></div>
+                    </div>
+                    <div class="flex-1 min-w-0 pt-0.5">
+                        <div class="flex justify-between items-start mb-0.5 pr-6">
+                             <h3 class="font-bold text-gray-800 dark:text-gray-100 truncate text-sm leading-tight">${typeIcon} ${shop.name}</h3>
                         </div>
                         <div class="flex items-center mb-1">
-                            ${rating} ${priceHtml} ${statusHtml}
+                            ${rating} ${priceHtml}
                         </div>
-                         <p class="text-xs text-gray-500 dark:text-gray-400 truncate"><i class="fa-solid ${typeIcon} mr-1 text-gray-400"></i>${shop.distanceText} • ${shop.vicinity || ''}</p>
+                         <p class="text-xs text-gray-500 dark:text-gray-400 truncate"><i class="fa-solid fa-location-dot text-blue-400"></i> ${shop.distanceText} • ${shop.vicinity || ''}</p>
                     </div>
                     ${favHtml}
                 `;
                 card.onclick = () => { selectedShop = shop; openModal(); };
-                resultsList.appendChild(card);
+                list.appendChild(card);
             });
-            const spacer = document.createElement('div'); spacer.className = 'h-24'; resultsList.appendChild(spacer);
+            const spacer = document.createElement('div'); spacer.className = 'h-24'; list.appendChild(spacer);
         }
 
         function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -618,34 +561,20 @@
             document.getElementById('modal-shop-name').innerText = selectedShop.name;
             document.getElementById('modal-shop-vicinity').innerText = selectedShop.vicinity || '';
             document.getElementById('modal-shop-rating').innerHTML = selectedShop.rating ? `<i class="fa-solid fa-star"></i> ${selectedShop.rating} <span class="text-gray-400 text-xs">(${selectedShop.user_ratings_total||0})</span>` : '';
-            document.getElementById('modal-shop-price').innerText = selectedShop.priceText || '';
-            
+            document.getElementById('modal-shop-price').innerText = selectedShop.price_level ? ' • ' + '💰'.repeat(selectedShop.price_level) : '';
+
             const statusEl = document.getElementById('modal-shop-status');
             const isOpen = selectedShop.opening_hours ? selectedShop.opening_hours.open_now : null;
-            if(isOpen === true) { statusEl.innerText = "營業中"; statusEl.className = "text-xs font-bold px-2 py-0.5 rounded border border-green-200 bg-green-50 text-green-600 dark:bg-green-900 dark:text-green-300 dark:border-green-800"; }
+            if(isOpen) { statusEl.innerText = "營業中"; statusEl.className = "text-xs font-bold px-2 py-0.5 rounded border border-green-200 bg-green-50 text-green-600 dark:bg-green-900 dark:text-green-300 dark:border-green-800"; }
             else if (isOpen === false) { statusEl.innerText = "休息中"; statusEl.className = "text-xs font-bold px-2 py-0.5 rounded border border-red-200 bg-red-50 text-red-600 dark:bg-red-900 dark:text-red-300 dark:border-red-800"; }
-            else { statusEl.innerText = "未知"; statusEl.className = "hidden"; }
+            else { statusEl.innerText = "時間未知"; statusEl.className = "text-xs text-gray-400"; }
 
             updateFavBtnState();
             fetchDetailedHours(selectedShop.place_id);
 
-            // Dark Mode Map Style
             const mapEl = document.getElementById('mini-map');
             const loc = selectedShop.geometry.location;
-            const mapOptions = { 
-                center: loc, 
-                zoom: 16, 
-                disableDefaultUI: true,
-                styles: isDarkMode() ? [
-                    { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-                    { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-                    { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-                    { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
-                    { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#212a37" }] },
-                    { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
-                ] : [] 
-            };
-            const miniMap = new google.maps.Map(mapEl, mapOptions);
+            const miniMap = new google.maps.Map(mapEl, { center: loc, zoom: 16, disableDefaultUI: true });
             new google.maps.Marker({ position: loc, map: miniMap });
 
             document.getElementById('modal').classList.remove('hidden');
@@ -655,18 +584,20 @@
         function fetchDetailedHours(placeId) {
             document.getElementById('modal-hours-text').innerText = "讀取中...";
             placesService.getDetails({ placeId: placeId, fields: ['opening_hours'] }, (place, status) => {
-                if (status === google.maps.places.PlacesServiceStatus.OK && place.opening_hours && place.opening_hours.weekday_text) {
+                if (status === google.maps.places.PlacesServiceStatus.OK && place.opening_hours) {
                     const days = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
                     const todayDay = days[new Date().getDay()];
-                    const todayText = place.opening_hours.weekday_text.find(t => t.startsWith(todayDay));
-                    if(todayText) {
-                        document.getElementById('modal-hours-text').innerText = todayText.split(': ')[1] || todayText;
-                    } else {
-                        document.getElementById('modal-hours-text').innerText = "無今日資訊";
+                    if(place.opening_hours.weekday_text) {
+                        const todayText = place.opening_hours.weekday_text.find(t => t.startsWith(todayDay));
+                        if(todayText) {
+                            const timeStr = todayText.split(': ')[1];
+                            const isOpen = place.opening_hours.isOpen();
+                            document.getElementById('modal-hours-text').innerHTML = `
+                                <span class="${isOpen ? 'text-green-600 dark:text-green-400':'text-red-500 dark:text-red-400'} font-bold mr-2">${isOpen?'營業中':'休息中'}</span> 
+                                ${timeStr}`;
+                        } else { document.getElementById('modal-hours-text').innerText = "今日無營業資訊"; }
                     }
-                } else {
-                    document.getElementById('modal-hours-text').innerText = "無法取得詳細時段";
-                }
+                } else { document.getElementById('modal-hours-text').innerText = "無法取得詳細時段"; }
             });
         }
         function closeModal() {
@@ -674,8 +605,7 @@
             setTimeout(() => document.getElementById('modal').classList.add('hidden'), 200);
         }
         function openGoogleMapsNav() {
-            const q = encodeURIComponent(selectedShop.name);
-            window.open(`https://www.google.com/maps/search/?api=1&query=${q}&query_place_id=${selectedShop.place_id}`, '_blank');
+            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedShop.name)}&query_place_id=${selectedShop.place_id}`, '_blank');
         }
 
         // --- Favorites ---
@@ -684,16 +614,16 @@
             const isFav = myFavorites.some(f => f.place_id === selectedShop.place_id);
             if(isFav) {
                 btn.innerHTML = `<i class="fa-solid fa-heart text-pink-500 mr-1"></i> 已在最愛`;
-                btn.className = "col-span-2 py-2.5 bg-pink-50 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 border border-pink-200 dark:border-pink-800 rounded-xl font-bold transition";
+                btn.className = "col-span-2 py-3 bg-pink-50 dark:bg-pink-900/30 text-pink-600 dark:text-pink-300 border border-pink-200 dark:border-pink-800 rounded-xl font-bold transition";
             } else {
                 btn.innerHTML = `<i class="fa-regular fa-heart mr-1"></i> 加入最愛`;
-                btn.className = "col-span-2 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition border border-gray-200 dark:border-gray-600";
+                btn.className = "col-span-2 py-3 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-200 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition";
             }
         }
         function toggleFavorite() {
             const idx = myFavorites.findIndex(f => f.place_id === selectedShop.place_id);
-            if (idx >= 0) { myFavorites.splice(idx, 1); Swal.fire({ icon: 'success', title: '已移除', timer: 1000, showConfirmButton: false, background: isDarkMode()?'#27272a':'#fff', color: isDarkMode()?'#fff':'#000' }); } 
-            else { myFavorites.unshift({ place_id: selectedShop.place_id, name: selectedShop.name, vicinity: selectedShop.vicinity, rating: 0 }); Swal.fire({ icon: 'success', title: '已加入', timer: 1000, showConfirmButton: false, background: isDarkMode()?'#27272a':'#fff', color: isDarkMode()?'#fff':'#000' }); }
+            if (idx >= 0) { myFavorites.splice(idx, 1); Swal.fire({ icon: 'success', title: '已移除', timer: 800, showConfirmButton: false }); } 
+            else { myFavorites.unshift({ place_id: selectedShop.place_id, name: selectedShop.name, vicinity: selectedShop.vicinity, rating: 0 }); Swal.fire({ icon: 'success', title: '已加入最愛！', timer: 800, showConfirmButton: false }); }
             localStorage.setItem('myFavorites', JSON.stringify(myFavorites));
             updateFavBtnState();
             if(currentUserLocation) processAndRenderShops();
@@ -702,11 +632,10 @@
             const list = document.getElementById('fav-list'); list.innerHTML = '';
             if(myFavorites.length === 0) list.innerHTML = `<div class="text-center text-gray-400 mt-10">還沒有收藏喔</div>`;
             myFavorites.forEach((fav, i) => {
-                let stars = ''; for(let s=1; s<=5; s++) { const c = s <= fav.rating ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-600'; stars += `<i class="fa-solid fa-star text-lg ${c} px-1" onclick="rateFavorite(${i}, ${s})"></i>`; }
-                list.innerHTML += `<div class="bg-white dark:bg-darkcard p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700"><div class="flex justify-between mb-2"><h3 class="font-bold text-gray-800 dark:text-gray-100">${fav.name}</h3><button onclick="removeFavorite(${i})" class="text-gray-300 hover:text-red-500"><i class="fa-solid fa-trash"></i></button></div><div class="flex items-center"><span class="text-xs text-gray-500 dark:text-gray-400 mr-2">評分:</span> ${stars}</div></div>`;
+                let stars = ''; for(let s=1; s<=5; s++) { const c = s <= fav.rating ? 'text-yellow-400' : 'text-gray-300'; stars += `<i class="fa-solid fa-star text-lg ${c} px-1" onclick="rateFavorite(${i}, ${s})"></i>`; }
+                list.innerHTML += `<div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700"><div class="flex justify-between mb-2"><h3 class="font-bold text-gray-800 dark:text-white">${fav.name}</h3><button onclick="removeFavorite(${i})" class="text-gray-300 hover:text-red-500"><i class="fa-solid fa-trash"></i></button></div><div class="flex items-center"><span class="text-xs text-gray-500 dark:text-gray-400 mr-2">我的評分:</span> ${stars}</div></div>`;
             });
-            document.getElementById('fav-modal').classList.remove('hidden', 'translate-y-full');
-            document.getElementById('fav-modal').classList.add('translate-y-0');
+            document.getElementById('fav-modal').classList.remove('hidden', 'translate-y-full'); document.getElementById('fav-modal').classList.add('translate-y-0');
         }
         function rateFavorite(index, rating) { myFavorites[index].rating = rating; localStorage.setItem('myFavorites', JSON.stringify(myFavorites)); openFavorites(); }
         function removeFavorite(index) { myFavorites.splice(index, 1); localStorage.setItem('myFavorites', JSON.stringify(myFavorites)); openFavorites(); if(currentUserLocation) processAndRenderShops(); }
@@ -717,8 +646,7 @@
         function openWheel() { if(displayedShops.length===0) return; document.getElementById('wheel-modal').classList.remove('hidden'); drawWheel(displayedShops); wheelCanvas.onclick = () => spinWheel(displayedShops); }
         function closeWheel() { document.getElementById('wheel-modal').classList.add('hidden'); }
         function drawWheel(data) {
-             const count = data.length; const arc = (2*Math.PI)/count;
-             const colors = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#FF9F43', '#54A0FF', '#5F27CD', '#FD79A8'];
+             const count = data.length; const arc = (2*Math.PI)/count; const colors = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#FF9F43', '#54A0FF', '#5F27CD', '#FD79A8'];
              wheelCtx.clearRect(0,0,320,320); wheelCtx.save(); wheelCtx.translate(160,160); wheelCtx.rotate(currentRotation);
              for(let i=0; i<count; i++){
                  const angle = i*arc; wheelCtx.beginPath(); wheelCtx.fillStyle = colors[i%colors.length];
@@ -731,19 +659,12 @@
         }
         function spinWheel(data) {
             if(isSpinning) return; isSpinning=true; document.getElementById('wheel-msg').innerText="命運轉動中...";
-            const winnerIdx = Math.floor(Math.random()*data.length);
-            const arc = 2*Math.PI/data.length; const spins = 5+Math.random()*5;
-            const targetRot = (spins*2*Math.PI) - ((winnerIdx*arc)+(arc/2)) - (Math.PI/2);
-            let start=null; 
-            function anim(ts) {
-                if(!start) start=ts; const p=Math.min((ts-start)/4000,1); const ease=1-Math.pow(1-p,3);
-                currentRotation = targetRot*ease; drawWheel(data);
-                if(p<1) requestAnimationFrame(anim);
-                else { isSpinning=false; closeWheel(); selectedShop=data[winnerIdx]; openModal(); }
-            }
+            const winnerIdx = Math.floor(Math.random()*data.length); const arc = 2*Math.PI/data.length; const spins = 5+Math.random()*5;
+            const targetRot = (spins*2*Math.PI) - ((winnerIdx*arc)+(arc/2)) - (Math.PI/2); let start=null; 
+            function anim(ts) { if(!start) start=ts; const p=Math.min((ts-start)/4000,1); const ease=1-Math.pow(1-p,3); currentRotation = targetRot*ease; drawWheel(data); if(p<1) requestAnimationFrame(anim); else { isSpinning=false; closeWheel(); selectedShop=data[winnerIdx]; openModal(); } }
             requestAnimationFrame(anim);
         }
-        function shareShop() { const t = `今天吃: ${selectedShop.name} https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedShop.name)}`; navigator.clipboard.writeText(t).then(()=>Swal.fire({icon:'success',title:'已複製',timer:1000,showConfirmButton:false,background:isDarkMode()?'#27272a':'#fff',color:isDarkMode()?'#fff':'#000'})); }
+        function shareShop() { const t = `今天吃: ${selectedShop.name} https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedShop.name)}`; navigator.clipboard.writeText(t).then(()=>Swal.fire({ icon:'success', title:'已複製', timer:800, showConfirmButton:false })); }
     </script>
 </body>
 </html>
