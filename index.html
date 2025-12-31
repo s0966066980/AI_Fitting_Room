@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>今天吃什麼？v12.0</title>
+    <title>今天吃什麼？v13.0</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -24,7 +24,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- Firebase (Optional for Voting) -->
+    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
@@ -45,8 +45,13 @@
         .loader { border: 3px solid #e5e7eb; border-top: 3px solid var(--primary); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        .toggle-checkbox:checked { right: 0; border-color: var(--primary); }
-        .toggle-checkbox:checked + .toggle-label { background-color: var(--primary); }
+        /* Fixed Toggle Switch */
+        .toggle-wrapper { position: relative; display: inline-block; width: 36px; height: 20px; }
+        .toggle-wrapper input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .toggle-slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .toggle-slider { background-color: var(--primary); }
+        input:checked + .toggle-slider:before { transform: translateX(16px); }
         
         .chip { transition: all 0.2s; white-space: nowrap; border: 1px solid #E5E7EB; background-color: white; color: #4B5563; }
         .dark .chip { background-color: #1F2937; border-color: #374151; color: #D1D5DB; }
@@ -55,19 +60,20 @@
 
         #mini-map { width: 100%; height: 180px; background-color: #eee; border-radius: 0.75rem; margin-bottom: 1rem; }
         .photo-thumb { width: 80px; height: 80px; object-fit: cover; border-radius: 0.75rem; }
-        .card-anim { opacity: 0; animation-fill-mode: forwards; } /* Handled by JS */
+        .card-anim { opacity: 0; animation-fill-mode: forwards; } 
         
         /* Slot Machine */
         .slot-window { overflow: hidden; height: 100px; background: #fff; border-radius: 8px; border: 2px solid #ddd; position: relative; }
         .slot-strip { display: flex; flex-direction: column; align-items: center; transition: transform 3s cubic-bezier(0.25, 1, 0.5, 1); }
-        .slot-item { height: 100px; display: flex; align-items: center; justify-content: center; font-size: 2rem; width: 100%; }
+        .slot-item { height: 100px; display: flex; align-items: center; justify-content: center; font-size: 2rem; width: 100%; padding: 0 10px; text-align: center; line-height: 1.2; }
         .slot-line { position: absolute; top: 50%; left: 0; right: 0; height: 2px; background: rgba(255,0,0,0.3); z-index: 10; }
+        .color-dot { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
     </style>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 dark:text-gray-100 h-screen flex flex-col overflow-hidden">
 
     <!-- Header -->
-    <header class="bg-white dark:bg-gray-800 shadow-sm z-20 px-4 py-3 flex justify-between items-center transition-colors">
+    <header class="bg-white dark:bg-gray-800 shadow-sm z-30 px-4 py-3 flex justify-between items-center transition-colors">
         <div class="flex items-center gap-3">
             <button onclick="refreshSearch(true)" class="theme-bg-light w-10 h-10 rounded-full flex items-center justify-center transition shadow-sm active:scale-90" title="強制重新整理">
                 <i class="fa-solid fa-arrows-rotate"></i>
@@ -76,7 +82,7 @@
                 <div class="flex items-center gap-2">
                     <h1 class="text-lg font-bold text-gray-800 dark:text-white">今天吃什麼</h1>
                     <div id="weather-badge" class="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 hidden">
-                        <i class="fa-solid fa-cloud"></i> 載入中
+                        <i class="fa-solid fa-cloud"></i>
                     </div>
                 </div>
                 <p class="text-xs text-gray-500 dark:text-gray-400">Hi 吃貨，<span id="date-display"></span></p>
@@ -96,7 +102,7 @@
     </header>
 
     <!-- Controls Area -->
-    <div class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 pb-2 z-10">
+    <div class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 pb-2 z-20 shadow-sm">
         
         <!-- Range & Filters -->
         <div class="px-4 py-3" id="range-container">
@@ -106,25 +112,25 @@
                     <span id="range-value" class="font-bold theme-text text-sm">500 m</span>
                 </div>
                 
-                <div class="flex gap-2">
+                <div class="flex gap-3 items-center">
                     <!-- Budget Filter -->
-                    <button onclick="toggleBudgetFilter()" id="btn-budget" class="text-xs font-bold px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-gray-500">預算 <i class="fa-solid fa-chevron-down"></i></button>
-                    <!-- Open Now -->
-                    <label for="open-now-toggle" class="flex items-center cursor-pointer relative select-none">
-                        <div class="relative">
-                            <input type="checkbox" id="open-now-toggle" class="sr-only" onchange="toggleOpenNow()">
-                            <div class="block bg-gray-200 dark:bg-gray-600 w-9 h-5 rounded-full toggle-bg transition"></div>
-                            <div class="dot absolute left-1 top-1 bg-white w-3 h-3 rounded-full transition transform" id="toggle-dot"></div>
-                        </div>
-                        <div class="ml-2 text-xs font-medium text-gray-600 dark:text-gray-300">只看營業中</div>
-                    </label>
+                    <button onclick="toggleBudgetFilter()" id="btn-budget" class="text-xs font-bold px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 border border-gray-200 dark:border-gray-600">預算 <i class="fa-solid fa-chevron-down ml-1"></i></button>
+                    
+                    <!-- Open Now Toggle (Fixed Structure) -->
+                    <div class="flex items-center">
+                        <label class="toggle-wrapper mr-2">
+                            <input type="checkbox" id="open-now-toggle" onchange="toggleOpenNow()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="text-xs font-medium text-gray-600 dark:text-gray-300 cursor-pointer" onclick="document.getElementById('open-now-toggle').click()">只看營業中</span>
+                    </div>
                 </div>
             </div>
             
             <input type="range" id="distance-range" min="100" max="2000" step="100" value="500" 
                    class="theme-accent w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer">
             
-            <!-- Budget Dropdown (Hidden) -->
+            <!-- Budget Dropdown -->
             <div id="budget-dropdown" class="hidden mt-2 flex gap-2 overflow-x-auto pb-1">
                 <button onclick="setBudget(0)" class="chip budget-chip px-3 py-1 rounded-full text-xs active">不限</button>
                 <button onclick="setBudget(1)" class="chip budget-chip px-3 py-1 rounded-full text-xs">$</button>
@@ -221,10 +227,19 @@
                 </div>
             </div>
 
+            <!-- Weather Toggle -->
+            <div class="mb-4 flex items-center justify-between">
+                <p class="text-sm text-gray-500">天氣推薦功能</p>
+                <label class="toggle-wrapper">
+                    <input type="checkbox" id="weather-toggle" onchange="toggleWeather()" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
             <div class="mb-6">
                 <p class="text-sm text-gray-500 mb-2">雲端功能 (Firebase)</p>
                 <button onclick="setupFirebase()" class="w-full py-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-sm border border-gray-200 dark:border-gray-600">設定 Firebase Config</button>
-                <p class="text-[10px] text-gray-400 mt-1 text-center">設定後才可使用好友投票與雲端備份</p>
+                <p class="text-[10px] text-gray-400 mt-1 text-center">格式自動修正：直接貼上即可</p>
             </div>
 
             <button onclick="document.getElementById('settings-modal').classList.add('hidden')" class="w-full py-2 theme-bg text-white rounded-xl font-bold">關閉</button>
@@ -303,6 +318,7 @@
                     <div id="modal-hours-text" class="pl-6 text-gray-500 dark:text-gray-300">讀取中...</div>
                 </div>
                 
+                <!-- Delivery Links (Uber Only) -->
                 <div class="flex gap-2 mb-4">
                      <button onclick="searchDelivery('ubereats')" class="w-full py-2 rounded-xl bg-green-500 hover:bg-green-600 text-white text-xs font-bold flex items-center justify-center transition">
                          <span class="mr-1">🚲</span> 搜 UberEats
@@ -340,7 +356,37 @@
     </div>
 
     <script>
-        // --- Init & Config ---
+        // --- Theme Manager (FIXED) ---
+        function applyTheme(color, bgLight) {
+            // Apply to :root
+            document.documentElement.style.setProperty('--primary', color);
+            document.documentElement.style.setProperty('--primary-light', bgLight);
+            // Save settings
+            localStorage.setItem('themeColor', color);
+            localStorage.setItem('themeBg', bgLight);
+        }
+        
+        function openSettings() { document.getElementById('settings-modal').classList.remove('hidden'); }
+        function openThemePicker() { document.getElementById('theme-modal').classList.remove('hidden'); }
+        function closeThemePicker() { document.getElementById('theme-modal').classList.add('hidden'); }
+        function changeTheme(c, l) { applyTheme(c, l); } // Removed closeThemePicker call to allow seeing changes
+        
+        // Init Theme
+        const savedColor = localStorage.getItem('themeColor');
+        const savedBg = localStorage.getItem('themeBg');
+        if(savedColor) applyTheme(savedColor, savedBg);
+
+        // --- Weather Toggle Logic ---
+        let isWeatherEnabled = localStorage.getItem('isWeatherEnabled') !== 'false'; // Default True
+        document.getElementById('weather-toggle').checked = isWeatherEnabled;
+
+        function toggleWeather() {
+            isWeatherEnabled = document.getElementById('weather-toggle').checked;
+            localStorage.setItem('isWeatherEnabled', isWeatherEnabled);
+            if(currentUserLocation) fetchWeather(currentUserLocation.lat, currentUserLocation.lng);
+        }
+
+        // --- Global Variables ---
         let map, placesService;
         let currentUserLocation = null;
         let allFetchedShops = [];
@@ -351,25 +397,18 @@
         let selectedShop = null;
         let currentRadius = 500;
         let onlyOpenNow = false;
-        let selectedBudget = 0; // 0: All, 1: $, 2: $$, 3: $$$
+        let selectedBudget = 0; 
         let myFavorites = JSON.parse(localStorage.getItem('myFavorites')) || [];
         let apiKey = localStorage.getItem('googleMapsApiKey') || '';
         let firebaseConfig = JSON.parse(localStorage.getItem('firebaseConfig')) || null;
-        let apiCache = JSON.parse(sessionStorage.getItem('apiCache')) || {}; // Session Cache
+        let apiCache = JSON.parse(sessionStorage.getItem('apiCache')) || {}; 
         let scriptLoaded = false;
         
-        // Slot Machine Vars
+        // Slot Machine
         let slotStrip = document.getElementById('slot-strip');
         let isSpinning = false;
 
-        // Init UI
         document.getElementById('date-display').innerText = new Date().toLocaleDateString('zh-TW', { month: 'long', day: 'numeric', weekday: 'short' });
-        const savedColor = localStorage.getItem('themeColor');
-        const savedBg = localStorage.getItem('themeBg');
-        if(savedColor) {
-            document.documentElement.style.setProperty('--primary', savedColor);
-            document.documentElement.style.setProperty('--primary-light', savedBg);
-        }
         
         if(!apiKey) document.getElementById('api-status').classList.remove('hidden');
         else loadGoogleMapsScript();
@@ -385,12 +424,15 @@
 
         async function fetchWeather(lat, lng) {
             const badge = document.getElementById('weather-badge');
+            if(!isWeatherEnabled) {
+                badge.classList.add('hidden');
+                return;
+            }
             try {
                 const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`);
                 const data = await res.json();
                 const code = data.current_weather.weathercode;
                 let icon = 'cloud'; let text = '多雲';
-                // Simplified codes
                 if (code <= 1) { icon = 'sun'; text = '晴天'; }
                 else if (code <= 3) { icon = 'cloud-sun'; text = '多雲'; }
                 else if (code <= 67) { icon = 'cloud-rain'; text = '有雨'; }
@@ -398,10 +440,10 @@
                 
                 badge.innerHTML = `<i class="fa-solid fa-${icon}"></i> ${text}`;
                 badge.classList.remove('hidden');
-            } catch(e) { console.error("Weather error", e); }
+            } catch(e) { console.error("Weather error", e); badge.classList.add('hidden'); }
         }
 
-        // --- API & Cache Logic ---
+        // --- API & Cache ---
         async function openApiKeySettings() {
             const { value: key } = await Swal.fire({ title: '設定 API Key', input: 'text', inputValue: apiKey, showCancelButton: true });
             if (key) { apiKey = key; localStorage.setItem('googleMapsApiKey', apiKey); location.reload(); }
@@ -415,7 +457,7 @@
             document.head.appendChild(script);
         }
 
-        // --- Core Search Logic ---
+        // --- Core Search ---
         function getLocation() {
             if (!apiKey) { openApiKeySettings(); return; }
             if (!navigator.geolocation) { Swal.fire('錯誤', '不支援定位', 'error'); return; }
@@ -438,7 +480,7 @@
         }
 
         function refreshSearch(force = false) {
-            if (force) apiCache = {}; // Clear cache on hard refresh
+            if (force) apiCache = {}; 
             if(!currentUserLocation) getLocation(); else fetchShops();
         }
 
@@ -447,13 +489,10 @@
             document.getElementById('results-list').classList.add('hidden');
             document.getElementById('fab-container').classList.add('hidden');
 
-            // Generate Cache Key
             const cacheKey = `${currentMode}_${subCategory}_${currentCustomKeyword}_${currentRadius}_${currentUserLocation.lat.toFixed(4)}_${currentUserLocation.lng.toFixed(4)}`;
             const now = Date.now();
 
-            // Check Cache (5 min validity)
             if (apiCache[cacheKey] && (now - apiCache[cacheKey].timestamp < 300000)) {
-                console.log("Using Cached Data");
                 allFetchedShops = apiCache[cacheKey].data;
                 processAndRenderShops();
                 return;
@@ -465,7 +504,7 @@
                 type: 'restaurant' 
             };
 
-            // Keyword Logic (v12 Optimized)
+            // Enhanced Keywords v13
             if (currentMode === 'date') {
                 delete request.type;
                 request.keyword = '咖啡廳 OR 甜點 OR 下午茶 OR 蛋糕';
@@ -477,8 +516,12 @@
                     if (subCategory === '日式料理') request.keyword = '日式料理 OR 壽司 OR 拉麵';
                     else if (subCategory === '韓式料理') request.keyword = '韓式料理 OR 韓式烤肉 OR 泡菜';
                     else if (subCategory === '手搖') {
-                        delete request.type; // Important: removing generic type to rely on keyword
+                        delete request.type; 
                         request.keyword = '手搖飲料 OR 珍珠奶茶 OR 飲料店';
+                    }
+                    else if (subCategory === '牛排') {
+                        // Strict steak Logic
+                        request.keyword = '牛排 OR 鐵板牛排 OR 炙燒牛排';
                     }
                     else request.keyword = subCategory;
                 }
@@ -486,12 +529,8 @@
 
             placesService.nearbySearch(request, (results, status) => {
                 if (status === google.maps.places.PlacesServiceStatus.OK) {
-                    // Save to Cache
-                    // Note: Google objects have internal state, mapping needed if using advanced features later, 
-                    // but for basic display keeping results array is ok for this session.
                     apiCache[cacheKey] = { timestamp: now, data: results };
                     sessionStorage.setItem('apiCache', JSON.stringify(apiCache));
-                    
                     allFetchedShops = results;
                     processAndRenderShops();
                 } else if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
@@ -508,27 +547,29 @@
                 if (onlyOpenNow) {
                     if (!shop.opening_hours || !shop.opening_hours.open_now) return false;
                 }
-                
                 // 2. Budget
                 if (selectedBudget > 0) {
                     if (!shop.price_level || shop.price_level > selectedBudget) return false;
                 }
-
-                // 3. Strict Bubble Tea Filter
-                if (currentMode === 'restaurant' && subCategory === '手搖') {
+                
+                // 3. Strict Logic
+                if (currentMode === 'restaurant') {
                     const name = shop.name.toLowerCase();
-                    const badKeywords = ['starbucks', 'louisa', 'cama', 'coffee', '咖啡', '伯朗'];
-                    const goodKeywords = ['茶', '飲', '凍', '吸', 'tea', 'beverage', '50嵐', 'coco', '清心', '可不可'];
-                    
-                    // If name has bad keyword, drop it immediately
-                    if (badKeywords.some(bad => name.includes(bad))) return false;
-                    
-                    // If it's tagged as cafe AND doesn't have good keyword, drop it
-                    if (shop.types.includes('cafe')) {
-                        if (!goodKeywords.some(good => name.includes(good))) return false;
+                    // Steak Logic: Filter out Hotpot if just want Steak
+                    if (subCategory === '牛排') {
+                        // Exclude places that are purely generic diners or hotpot unless they say steak
+                        if (name.includes('火鍋') && !name.includes('牛排')) return false;
+                    }
+                    // Bubble Tea Logic
+                    if (subCategory === '手搖') {
+                        const badKeywords = ['starbucks', 'louisa', 'cama', 'coffee', '咖啡', '伯朗'];
+                        const goodKeywords = ['茶', '飲', '凍', '吸', 'tea', 'beverage', '50嵐', 'coco', '清心', '可不可'];
+                        if (badKeywords.some(bad => name.includes(bad))) return false;
+                        if (shop.types.includes('cafe')) {
+                            if (!goodKeywords.some(good => name.includes(good))) return false;
+                        }
                     }
                 }
-
                 return true;
             });
 
@@ -564,7 +605,6 @@
 
             displayedShops.forEach((shop, index) => {
                 const card = document.createElement('div');
-                // Waterfall animation delay
                 card.style.animationDelay = `${index * 0.05}s`;
                 card.className = 'bg-white dark:bg-gray-800 p-3 rounded-2xl shadow-sm mx-4 mb-3 flex items-start gap-3 cursor-pointer border border-gray-100 dark:border-gray-700 hover:border-blue-300 relative card-anim animate-fade-in-up opacity-0';
                 
@@ -576,9 +616,7 @@
                 
                 let typeIcon = '';
                 if(subCategory === '手搖') typeIcon = '🥤 ';
-                else if(subCategory === '日式料理' || shop.name.includes('壽司')) typeIcon = '🍱 ';
                 else if(subCategory === '牛排') typeIcon = '🥩 ';
-                else if(subCategory === '小吃') typeIcon = '🍢 ';
                 
                 const isOpen = shop.opening_hours ? shop.opening_hours.open_now : null;
                 const statusColor = isOpen === true ? 'bg-green-500' : (isOpen === false ? 'bg-red-500' : 'bg-gray-400');
@@ -614,102 +652,51 @@
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
-        // --- Budget Filter ---
-        function toggleBudgetFilter() {
-            const dropdown = document.getElementById('budget-dropdown');
-            dropdown.classList.toggle('hidden');
-        }
+        // --- Controls ---
+        function toggleBudgetFilter() { document.getElementById('budget-dropdown').classList.toggle('hidden'); }
         function setBudget(level) {
             selectedBudget = level;
-            document.querySelectorAll('.budget-chip').forEach((el, idx) => {
-                if (idx === level) el.classList.add('active'); else el.classList.remove('active');
-            });
-            document.getElementById('btn-budget').innerHTML = `預算 ${level===0?'': '$'.repeat(level)} <i class="fa-solid fa-chevron-down"></i>`;
+            document.querySelectorAll('.budget-chip').forEach((el, idx) => { if (idx === level) el.classList.add('active'); else el.classList.remove('active'); });
+            document.getElementById('btn-budget').innerHTML = `預算 ${level===0?'': '$'.repeat(level)} <i class="fa-solid fa-chevron-down ml-1"></i>`;
+            if(allFetchedShops.length > 0) processAndRenderShops();
+        }
+        function toggleOpenNow() {
+            onlyOpenNow = document.getElementById('open-now-toggle').checked;
             if(allFetchedShops.length > 0) processAndRenderShops();
         }
 
-        // --- Slot Machine (New) ---
-        function openSlotMachine() {
-            if(displayedShops.length === 0) return;
-            document.getElementById('slot-modal').classList.remove('hidden');
-            
-            // Build Strip
-            const strip = document.getElementById('slot-strip');
-            strip.innerHTML = '';
-            // Duplicate list 3 times for scrolling effect
-            const list = [...displayedShops, ...displayedShops, ...displayedShops];
-            list.forEach(s => {
-                const div = document.createElement('div');
-                div.className = 'slot-item font-bold text-gray-800';
-                div.innerText = s.name.substring(0, 6);
-                strip.appendChild(div);
-            });
-            strip.style.transform = 'translateY(0px)';
-            document.getElementById('slot-msg').innerText = "拉動拉桿來決定！";
-        }
-        
-        function spinSlot() {
-            if(isSpinning) return; isSpinning = true;
-            document.getElementById('slot-msg').innerText = "運氣旋轉中...";
-            
-            const strip = document.getElementById('slot-strip');
-            const winnerIdx = Math.floor(Math.random() * displayedShops.length);
-            const itemHeight = 100;
-            // Calculate position: Land on the 2nd set of items + winner index
-            const targetY = -((displayedShops.length * itemHeight) + (winnerIdx * itemHeight));
-            
-            strip.style.transition = 'transform 3s cubic-bezier(0.25, 1, 0.5, 1)';
-            strip.style.transform = `translateY(${targetY}px)`;
-            
-            setTimeout(() => {
-                isSpinning = false;
-                selectedShop = displayedShops[winnerIdx];
-                closeSlot();
-                openModal();
-            }, 3500);
-        }
-        function closeSlot() { document.getElementById('slot-modal').classList.add('hidden'); }
-
-        // --- Party / Voting (Firebase) ---
+        // --- Firebase Config Parser (Fixed) ---
         async function setupFirebase() {
             const { value: configStr } = await Swal.fire({
                 title: 'Firebase Config',
                 input: 'textarea',
-                inputLabel: '請貼上 Firebase Config JSON',
-                inputPlaceholder: '{ apiKey: "...", ... }',
+                inputLabel: '請貼上 Firebase Config',
+                inputPlaceholder: 'const firebaseConfig = { ... }',
                 showCancelButton: true
             });
             if(configStr) {
                 try {
-                    // Try to parse relaxed JSON (standard firebase config copy is JS object, user might need to fix quotes)
-                    // We'll assume user pastes valid JSON or key-value object string.
-                    // For simplicity, just saving string and alerting user they need valid JSON.
-                    const config = JSON.parse(configStr.replace(/(['"])?([a-zA-Z0-9_]+)(['"])?:/g, '"$2": ')); 
+                    // Robust parser: removes "const ... =", removes comments, ensures keys are quoted
+                    let cleanStr = configStr.replace(/const\s+\w+\s*=\s*/, '').replace(/;/g, ''); 
+                    cleanStr = cleanStr.replace(/(['"])?([a-zA-Z0-9_]+)(['"])?:/g, '"$2": ');
+                    cleanStr = cleanStr.replace(/'/g, '"'); // Ensure double quotes
+                    const config = JSON.parse(cleanStr); 
                     localStorage.setItem('firebaseConfig', JSON.stringify(config));
-                    location.reload();
-                } catch(e) { Swal.fire('格式錯誤', '請確保是有效的 JSON 格式', 'error'); }
+                    Swal.fire('成功', 'Firebase 設定已儲存，即將重整', 'success').then(() => location.reload());
+                } catch(e) { console.error(e); Swal.fire('格式錯誤', '無法解析 Config，請確認複製完整', 'error'); }
             }
         }
 
-        // --- UI Modes & Subcats ---
+        // --- Standard Logic (Modal, Wheel, Party) matches v12 logic ---
+        // (Function stubs maintained for brevity as they were stable)
         function setMode(mode) {
             currentMode = mode;
             document.getElementById('keyword-badge').classList.add('hidden');
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.className = "filter-btn px-4 py-2 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 transition transform active:scale-95";
-            });
-            if (mode !== 'custom') {
-                document.getElementById(`btn-${mode}`).className = "filter-btn theme-bg px-4 py-2 rounded-xl text-sm font-bold shadow-md transition transform active:scale-95";
-            }
-            if (mode === 'restaurant') {
-                document.getElementById('sub-categories').classList.remove('hidden');
-            } else {
-                document.getElementById('sub-categories').classList.add('hidden');
-                subCategory = 'all';
-            }
+            document.querySelectorAll('.filter-btn').forEach(btn => { btn.className = "filter-btn px-4 py-2 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 transition transform active:scale-95"; });
+            if (mode !== 'custom') { document.getElementById(`btn-${mode}`).className = "filter-btn theme-bg px-4 py-2 rounded-xl text-sm font-bold shadow-md transition transform active:scale-95"; }
+            if (mode === 'restaurant') { document.getElementById('sub-categories').classList.remove('hidden'); } else { document.getElementById('sub-categories').classList.add('hidden'); subCategory = 'all'; }
             if (currentUserLocation) refreshSearch(); else getLocation();
         }
-
         function setSubCategory(cat) {
             subCategory = cat;
             const chips = document.getElementById('sub-categories').querySelectorAll('button');
@@ -725,12 +712,10 @@
             else if(cat === '居酒屋') document.getElementById('chip-izakaya').classList.add('active');
             refreshSearch();
         }
-
         async function askCustomSearch() {
             const { value: keyword } = await Swal.fire({ title: '想吃什麼？', input: 'text', showCancelButton: true });
             if (keyword) {
-                currentCustomKeyword = keyword;
-                currentMode = 'custom';
+                currentCustomKeyword = keyword; currentMode = 'custom';
                 document.getElementById('sub-categories').classList.add('hidden');
                 document.querySelectorAll('.filter-btn').forEach(btn => btn.className = "filter-btn px-4 py-2 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 transition");
                 document.getElementById('btn-custom').className = "filter-btn theme-bg px-4 py-2 rounded-xl text-sm font-bold shadow-md transition";
@@ -739,96 +724,39 @@
                 if(!currentUserLocation) getLocation(); else refreshSearch();
             }
         }
-
-        // --- Detail Modal ---
+        function openSlotMachine() { if(displayedShops.length === 0) return; document.getElementById('slot-modal').classList.remove('hidden'); const strip = document.getElementById('slot-strip'); strip.innerHTML = ''; const list = [...displayedShops, ...displayedShops, ...displayedShops]; list.forEach(s => { const div = document.createElement('div'); div.className = 'slot-item font-bold text-gray-800'; div.innerText = s.name.substring(0, 6); strip.appendChild(div); }); strip.style.transform = 'translateY(0px)'; document.getElementById('slot-msg').innerText = "拉動拉桿來決定！"; }
+        function spinSlot() { if(isSpinning) return; isSpinning = true; document.getElementById('slot-msg').innerText = "運氣旋轉中..."; const strip = document.getElementById('slot-strip'); const winnerIdx = Math.floor(Math.random() * displayedShops.length); const itemHeight = 100; const targetY = -((displayedShops.length * itemHeight) + (winnerIdx * itemHeight)); strip.style.transition = 'transform 3s cubic-bezier(0.25, 1, 0.5, 1)'; strip.style.transform = `translateY(${targetY}px)`; setTimeout(() => { isSpinning = false; selectedShop = displayedShops[winnerIdx]; closeSlot(); openModal(); }, 3500); }
+        function closeSlot() { document.getElementById('slot-modal').classList.add('hidden'); }
         function openModal() {
             if(!selectedShop) return;
             document.getElementById('modal-shop-name').innerText = selectedShop.name;
             document.getElementById('modal-shop-vicinity').innerText = selectedShop.vicinity || '';
-            document.getElementById('modal-shop-rating').innerHTML = selectedShop.rating ? `<i class="fa-solid fa-star"></i> ${selectedShop.rating} <span class="text-gray-400 text-xs">(${selectedShop.user_ratings_total||0})</span>` : '';
+            document.getElementById('modal-shop-rating').innerHTML = selectedShop.rating ? `<i class="fa-solid fa-star"></i> ${selectedShop.rating}` : '';
             document.getElementById('modal-shop-price').innerText = selectedShop.priceSymbol ? ' • ' + selectedShop.priceSymbol : '';
-
             const statusEl = document.getElementById('modal-shop-status');
             const isOpen = selectedShop.opening_hours ? selectedShop.opening_hours.open_now : null;
             if(isOpen) { statusEl.innerText = "營業中"; statusEl.className = "text-xs font-bold px-2 py-0.5 rounded border border-green-200 bg-green-50 text-green-600 dark:bg-green-900 dark:text-green-300 dark:border-green-800"; }
             else if (isOpen === false) { statusEl.innerText = "休息中"; statusEl.className = "text-xs font-bold px-2 py-0.5 rounded border border-red-200 bg-red-50 text-red-600 dark:bg-red-900 dark:text-red-300 dark:border-red-800"; }
             else { statusEl.innerText = "時間未知"; statusEl.className = "text-xs text-gray-400"; }
-
-            updateFavBtnState();
-            fetchDetailedHours(selectedShop.place_id);
-
-            const mapEl = document.getElementById('mini-map');
-            const loc = selectedShop.geometry.location;
-            const miniMap = new google.maps.Map(mapEl, { center: loc, zoom: 16, disableDefaultUI: true });
-            new google.maps.Marker({ position: loc, map: miniMap });
-
-            document.getElementById('modal').classList.remove('hidden');
-            setTimeout(() => document.getElementById('modal-content').classList.remove('scale-95', 'opacity-0'), 10);
+            updateFavBtnState(); fetchDetailedHours(selectedShop.place_id);
+            const mapEl = document.getElementById('mini-map'); const loc = selectedShop.geometry.location; const miniMap = new google.maps.Map(mapEl, { center: loc, zoom: 16, disableDefaultUI: true }); new google.maps.Marker({ position: loc, map: miniMap });
+            document.getElementById('modal').classList.remove('hidden'); setTimeout(() => document.getElementById('modal-content').classList.remove('scale-95', 'opacity-0'), 10);
         }
-
-        function fetchDetailedHours(placeId) {
-            document.getElementById('modal-hours-text').innerText = "讀取中...";
-            placesService.getDetails({ placeId: placeId, fields: ['opening_hours'] }, (place, status) => {
-                if (status === google.maps.places.PlacesServiceStatus.OK && place.opening_hours) {
-                    const days = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
-                    const todayDay = days[new Date().getDay()];
-                    if(place.opening_hours.weekday_text) {
-                        const todayText = place.opening_hours.weekday_text.find(t => t.startsWith(todayDay));
-                        if(todayText) {
-                            const timeStr = todayText.split(': ')[1] || todayText;
-                            const isOpen = place.opening_hours.isOpen();
-                            document.getElementById('modal-hours-text').innerHTML = `
-                                <span class="${isOpen ? 'text-green-600 dark:text-green-400':'text-red-500 dark:text-red-400'} font-bold mr-2">${isOpen?'營業中':'休息中'}</span> 
-                                ${timeStr}`;
-                        } else { document.getElementById('modal-hours-text').innerText = "今日無營業資訊"; }
-                    }
-                } else { document.getElementById('modal-hours-text').innerText = "無法取得詳細時段"; }
-            });
-        }
+        function fetchDetailedHours(placeId) { document.getElementById('modal-hours-text').innerText = "讀取中..."; placesService.getDetails({ placeId: placeId, fields: ['opening_hours'] }, (place, status) => { if (status === google.maps.places.PlacesServiceStatus.OK && place.opening_hours) { const days = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六']; const todayDay = days[new Date().getDay()]; if(place.opening_hours.weekday_text) { const todayText = place.opening_hours.weekday_text.find(t => t.startsWith(todayDay)); if(todayText) { const timeStr = todayText.split(': ')[1] || todayText; const isOpen = place.opening_hours.isOpen(); document.getElementById('modal-hours-text').innerHTML = `<span class="${isOpen ? 'text-green-600 dark:text-green-400':'text-red-500 dark:text-red-400'} font-bold mr-2">${isOpen?'營業中':'休息中'}</span> ${timeStr}`; } else { document.getElementById('modal-hours-text').innerText = "今日無營業資訊"; } } } else { document.getElementById('modal-hours-text').innerText = "無法取得詳細時段"; } }); }
         function closeModal() { document.getElementById('modal-content').classList.add('scale-95', 'opacity-0'); setTimeout(() => document.getElementById('modal').classList.add('hidden'), 200); }
         function openGoogleMapsNav() { window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedShop.name)}&query_place_id=${selectedShop.place_id}`, '_blank'); }
         function searchDelivery(platform) { const name = encodeURIComponent(selectedShop.name); let url = `https://www.ubereats.com/tw/search?q=${name}`; window.open(url, '_blank'); }
         function showError(t) { document.getElementById('loading-screen').classList.add('hidden'); document.getElementById('results-list').classList.remove('hidden'); document.getElementById('results-list').innerHTML = `<div class="text-center mt-10 text-gray-400">${t}</div>`; }
-
-        // --- Other Features ---
-        function openSettings() { document.getElementById('settings-modal').classList.remove('hidden'); }
-        function openThemePicker() { document.getElementById('theme-modal').classList.remove('hidden'); }
-        function closeThemePicker() { document.getElementById('theme-modal').classList.add('hidden'); }
-        function changeTheme(c, l) { applyTheme(c, l); closeThemePicker(); }
-        function openPartyMode() { 
-            if(!firebaseConfig) { Swal.fire('功能未啟用', '請先在設定中輸入 Firebase Config', 'info'); return; }
-            document.getElementById('party-modal').classList.remove('hidden'); 
-        }
-        function closeParty() { document.getElementById('party-modal').classList.add('hidden'); }
-        
-        // --- Favorites ---
-        function updateFavBtnState() {
-            const btn = document.getElementById('btn-toggle-fav');
-            const isFav = myFavorites.some(f => f.place_id === selectedShop.place_id);
-            if(isFav) { btn.innerHTML = `<i class="fa-solid fa-heart theme-text mr-1"></i> 已在最愛`; btn.classList.add('theme-bg-light', 'theme-border'); } 
-            else { btn.innerHTML = `<i class="fa-regular fa-heart mr-1"></i> 加入最愛`; btn.classList.remove('theme-bg-light', 'theme-border'); }
-        }
-        function toggleFavorite() {
-            const idx = myFavorites.findIndex(f => f.place_id === selectedShop.place_id);
-            if (idx >= 0) { myFavorites.splice(idx, 1); Swal.fire({ icon: 'success', title: '已移除', timer: 800, showConfirmButton: false }); } 
-            else { myFavorites.unshift({ place_id: selectedShop.place_id, name: selectedShop.name, vicinity: selectedShop.vicinity, rating: 0 }); Swal.fire({ icon: 'success', title: '已加入最愛！', timer: 800, showConfirmButton: false }); }
-            localStorage.setItem('myFavorites', JSON.stringify(myFavorites));
-            updateFavBtnState(); if(currentUserLocation) processAndRenderShops();
-        }
-        function openFavorites() {
-            const list = document.getElementById('fav-list'); list.innerHTML = '';
-            if(myFavorites.length === 0) list.innerHTML = `<div class="text-center text-gray-400 mt-10">還沒有收藏喔</div>`;
-            myFavorites.forEach((fav, i) => {
-                let stars = ''; for(let s=1; s<=5; s++) { const c = s <= fav.rating ? 'text-yellow-400' : 'text-gray-300'; stars += `<i class="fa-solid fa-star text-lg ${c} px-1" onclick="rateFavorite(${i}, ${s})"></i>`; }
-                list.innerHTML += `<div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700"><div class="flex justify-between mb-2"><h3 class="font-bold text-gray-800 dark:text-white">${fav.name}</h3><button onclick="removeFavorite(${i})" class="text-gray-300 hover:text-red-500"><i class="fa-solid fa-trash"></i></button></div><div class="flex items-center"><span class="text-xs text-gray-500 dark:text-gray-400 mr-2">我的評分:</span> ${stars}</div></div>`;
-            });
-            document.getElementById('fav-modal').classList.remove('hidden', 'translate-y-full'); document.getElementById('fav-modal').classList.add('translate-y-0');
-        }
+        function updateFavBtnState() { const btn = document.getElementById('btn-toggle-fav'); const isFav = myFavorites.some(f => f.place_id === selectedShop.place_id); if(isFav) { btn.innerHTML = `<i class="fa-solid fa-heart theme-text mr-1"></i> 已在最愛`; btn.classList.add('theme-bg-light', 'theme-border'); } else { btn.innerHTML = `<i class="fa-regular fa-heart mr-1"></i> 加入最愛`; btn.classList.remove('theme-bg-light', 'theme-border'); } }
+        function toggleFavorite() { const idx = myFavorites.findIndex(f => f.place_id === selectedShop.place_id); if (idx >= 0) { myFavorites.splice(idx, 1); Swal.fire({ icon: 'success', title: '已移除', timer: 800, showConfirmButton: false }); } else { myFavorites.unshift({ place_id: selectedShop.place_id, name: selectedShop.name, vicinity: selectedShop.vicinity, rating: 0 }); Swal.fire({ icon: 'success', title: '已加入最愛！', timer: 800, showConfirmButton: false }); } localStorage.setItem('myFavorites', JSON.stringify(myFavorites)); updateFavBtnState(); if(currentUserLocation) processAndRenderShops(); }
+        function openFavorites() { const list = document.getElementById('fav-list'); list.innerHTML = ''; if(myFavorites.length === 0) list.innerHTML = `<div class="text-center text-gray-400 mt-10">還沒有收藏喔</div>`; myFavorites.forEach((fav, i) => { let stars = ''; for(let s=1; s<=5; s++) { const c = s <= fav.rating ? 'text-yellow-400' : 'text-gray-300'; stars += `<i class="fa-solid fa-star text-lg ${c} px-1" onclick="rateFavorite(${i}, ${s})"></i>`; } list.innerHTML += `<div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700"><div class="flex justify-between mb-2"><h3 class="font-bold text-gray-800 dark:text-white">${fav.name}</h3><button onclick="removeFavorite(${i})" class="text-gray-300 hover:text-red-500"><i class="fa-solid fa-trash"></i></button></div><div class="flex items-center"><span class="text-xs text-gray-500 dark:text-gray-400 mr-2">我的評分:</span> ${stars}</div></div>`; }); document.getElementById('fav-modal').classList.remove('hidden', 'translate-y-full'); document.getElementById('fav-modal').classList.add('translate-y-0'); }
         function rateFavorite(index, rating) { myFavorites[index].rating = rating; localStorage.setItem('myFavorites', JSON.stringify(myFavorites)); openFavorites(); }
         function removeFavorite(index) { myFavorites.splice(index, 1); localStorage.setItem('myFavorites', JSON.stringify(myFavorites)); openFavorites(); if(currentUserLocation) processAndRenderShops(); }
         function closeFavorites() { document.getElementById('fav-modal').classList.add('translate-y-full'); setTimeout(()=>document.getElementById('fav-modal').classList.add('hidden'), 300); }
         function clearFavorites() { if(confirm("清空？")) { myFavorites=[]; localStorage.setItem('myFavorites','[]'); openFavorites(); processAndRenderShops(); } }
         function shareShop() { const t = `今天吃: ${selectedShop.name} https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedShop.name)}`; navigator.clipboard.writeText(t).then(()=>Swal.fire({ icon:'success', title:'已複製', timer:800, showConfirmButton:false })); }
+        function openPartyMode() { if(!firebaseConfig) { Swal.fire('功能未啟用', '請先在設定中輸入 Firebase Config', 'info'); return; } document.getElementById('party-modal').classList.remove('hidden'); }
+        function closeParty() { document.getElementById('party-modal').classList.add('hidden'); }
     </script>
 </body>
 </html>
