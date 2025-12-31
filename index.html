@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>今天吃什麼？v14.0 (完美解析版)</title>
+    <title>今天吃什麼？v15.0 (全能進化版)</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -13,8 +13,14 @@
             theme: {
                 extend: {
                     colors: { gray: { 900: '#111827', 800: '#1F2937', 700: '#374151' } },
-                    animation: { 'fade-in-up': 'fadeInUp 0.5s ease-out forwards' },
-                    keyframes: { fadeInUp: { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } } }
+                    animation: { 
+                        'fade-in-up': 'fadeInUp 0.5s ease-out forwards',
+                        'marquee': 'marquee 25s linear infinite'
+                    },
+                    keyframes: { 
+                        fadeInUp: { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+                        marquee: { '0%': { transform: 'translateX(100%)' }, '100%': { transform: 'translateX(-100%)' } }
+                    }
                 }
             }
         }
@@ -24,15 +30,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     
     <style>
         :root { --primary: #3B82F6; --primary-light: #EFF6FF; --text-on-primary: #ffffff; }
         body { font-family: 'Noto Sans TC', sans-serif; -webkit-tap-highlight-color: transparent; transition: background-color 0.3s; }
         
+        /* Theme Utilities */
         .theme-bg { background-color: var(--primary) !important; color: var(--text-on-primary) !important; }
         .theme-text { color: var(--primary) !important; }
         .theme-border { border-color: var(--primary) !important; }
@@ -45,7 +48,7 @@
         .loader { border: 3px solid #e5e7eb; border-top: 3px solid var(--primary); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* Fixed Toggle Switch */
+        /* Toggle Switch */
         .toggle-wrapper { position: relative; display: inline-block; width: 36px; height: 20px; }
         .toggle-wrapper input { opacity: 0; width: 0; height: 0; }
         .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
@@ -62,43 +65,51 @@
         .photo-thumb { width: 80px; height: 80px; object-fit: cover; border-radius: 0.75rem; }
         .card-anim { opacity: 0; animation-fill-mode: forwards; } 
         
+        /* Slot Machine */
         .slot-window { overflow: hidden; height: 100px; background: #fff; border-radius: 8px; border: 2px solid #ddd; position: relative; }
         .slot-strip { display: flex; flex-direction: column; align-items: center; transition: transform 3s cubic-bezier(0.25, 1, 0.5, 1); }
         .slot-item { height: 100px; display: flex; align-items: center; justify-content: center; font-size: 2rem; width: 100%; padding: 0 10px; text-align: center; line-height: 1.2; }
         .slot-line { position: absolute; top: 50%; left: 0; right: 0; height: 2px; background: rgba(255,0,0,0.3); z-index: 10; }
         .color-dot { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
+        .color-dot.selected { border-color: #374151; transform: scale(1.1); }
     </style>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 dark:text-gray-100 h-screen flex flex-col overflow-hidden">
 
-    <!-- Header -->
-    <header class="bg-white dark:bg-gray-800 shadow-sm z-30 px-4 py-3 flex justify-between items-center transition-colors">
-        <div class="flex items-center gap-3">
-            <button onclick="refreshSearch(true)" class="theme-bg-light w-10 h-10 rounded-full flex items-center justify-center transition shadow-sm active:scale-90" title="強制重新整理">
-                <i class="fa-solid fa-arrows-rotate"></i>
-            </button>
-            <div class="flex flex-col">
-                <div class="flex items-center gap-2">
-                    <h1 class="text-lg font-bold text-gray-800 dark:text-white">今天吃什麼</h1>
-                    <div id="weather-badge" class="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 hidden">
-                        <i class="fa-solid fa-cloud"></i>
-                    </div>
-                </div>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Hi 吃貨，<span id="date-display"></span></p>
+    <!-- Header & Marquee -->
+    <div class="z-30 shadow-sm bg-white dark:bg-gray-800 transition-colors">
+        <!-- Marquee -->
+        <div class="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 text-xs py-1 overflow-hidden relative whitespace-nowrap border-b border-yellow-100 dark:border-yellow-800/30">
+            <div id="marquee-text" class="inline-block animate-marquee pl-full">
+                👋 Hi 吃貨，今天想吃點什麼呢？ 晨晨幫你找好料！
             </div>
         </div>
-        <div class="flex gap-2">
-            <button onclick="openPartyMode()" class="bg-purple-50 dark:bg-purple-900/30 p-2.5 rounded-full text-purple-500 hover:bg-purple-100 transition relative" title="好友投票">
-                <i class="fa-solid fa-users"></i>
-            </button>
-            <button onclick="openSettings()" class="bg-gray-100 dark:bg-gray-700 p-2.5 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-200 transition">
-                <i class="fa-solid fa-gear"></i>
-            </button>
-            <button onclick="openFavorites()" class="bg-pink-50 dark:bg-gray-700 p-2.5 rounded-full text-pink-500 hover:bg-pink-100 transition relative">
-                <i class="fa-solid fa-heart"></i>
-            </button>
-        </div>
-    </header>
+
+        <header class="px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <button onclick="refreshSearch(true)" class="theme-bg-light w-10 h-10 rounded-full flex items-center justify-center transition shadow-sm active:scale-90" title="強制重新整理">
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                </button>
+                <div class="flex flex-col">
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-lg font-bold text-gray-800 dark:text-white">今天吃什麼</h1>
+                        <div id="weather-badge" class="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 hidden">
+                            <i class="fa-solid fa-cloud"></i>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Hi 吃貨，<span id="date-display"></span></p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="openSettings()" class="bg-gray-100 dark:bg-gray-700 p-2.5 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-200 transition">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+                <button onclick="openFavorites()" class="bg-pink-50 dark:bg-gray-700 p-2.5 rounded-full text-pink-500 hover:bg-pink-100 transition relative">
+                    <i class="fa-solid fa-heart"></i>
+                </button>
+            </div>
+        </header>
+    </div>
 
     <!-- Controls Area -->
     <div class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 pb-2 z-20 shadow-sm">
@@ -107,7 +118,7 @@
         <div class="px-4 py-3" id="range-container">
             <div class="flex justify-between items-center mb-2">
                 <div class="flex items-baseline gap-2">
-                    <span class="text-xs text-gray-500 dark:text-gray-400">距離</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">距離 <i id="gps-indicator" class="fa-solid fa-location-crosshairs animate-pulse text-green-500 hidden" title="GPS 追蹤中"></i></span>
                     <span id="range-value" class="font-bold theme-text text-sm">500 m</span>
                 </div>
                 
@@ -184,10 +195,10 @@
             </div>
             <div>
                 <h2 class="text-xl font-bold text-gray-800 dark:text-white">今天吃什麼？</h2>
-                <p class="text-gray-500 dark:text-gray-400 mt-2 text-sm px-8">智慧快取 • 天氣推薦 • 好友投票</p>
+                <p class="text-gray-500 dark:text-gray-400 mt-2 text-sm px-8">黑名單過濾 • 即時定位 • 菜單快搜</p>
                 <p id="api-status" class="text-xs text-red-500 mt-2 font-bold hidden bg-red-50 px-2 py-1 rounded inline-block">⚠️ 請先設定 API Key</p>
             </div>
-            <button onclick="getLocation()" class="theme-bg hover:opacity-90 text-white font-bold py-3.5 px-10 rounded-2xl shadow-lg transform transition active:scale-95 flex items-center text-lg">
+            <button onclick="initLocation()" class="theme-bg hover:opacity-90 text-white font-bold py-3.5 px-10 rounded-2xl shadow-lg transform transition active:scale-95 flex items-center text-lg">
                 <i class="fa-solid fa-location-arrow mr-2"></i> 搜尋美食
             </button>
         </div>
@@ -195,7 +206,7 @@
         <!-- Loading -->
         <div id="loading-screen" class="hidden flex flex-col items-center justify-center h-full pt-20">
             <div class="loader mb-4"></div>
-            <p class="text-gray-600 dark:text-gray-300 font-medium">正在幫你尋找好料...</p>
+            <p class="text-gray-600 dark:text-gray-300 font-medium">正在掃描周圍店家...</p>
         </div>
 
         <!-- Results -->
@@ -235,10 +246,10 @@
                 </label>
             </div>
 
-            <div class="mb-6">
-                <p class="text-sm text-gray-500 mb-2">雲端功能 (Firebase)</p>
-                <button onclick="setupFirebase()" class="w-full py-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-sm border border-gray-200 dark:border-gray-600">設定 Firebase Config</button>
-                <p class="text-[10px] text-gray-400 mt-1 text-center">支援直接貼上 const 格式</p>
+            <div class="mb-6 space-y-2">
+                <p class="text-sm text-gray-500 mb-1">進階設定</p>
+                <button onclick="clearBlacklist()" class="w-full py-2 bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-300 rounded-lg text-sm border border-red-100 dark:border-red-800">重設黑名單</button>
+                <button onclick="openApiKeySettings()" class="w-full py-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-sm border border-gray-200 dark:border-gray-600">重設 API Key</button>
             </div>
 
             <button onclick="document.getElementById('settings-modal').classList.add('hidden')" class="w-full py-2 theme-bg text-white rounded-xl font-bold">關閉</button>
@@ -260,51 +271,14 @@
         <button onclick="closeSlot()" class="mt-8 text-gray-400 text-sm hover:text-white underline">取消</button>
     </div>
 
-    <!-- Voting Room Modal -->
-    <div id="party-modal" class="fixed inset-0 bg-black/60 z-[75] hidden flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-sm p-6 shadow-2xl">
-            <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-4 text-center">👯 好友投票 (Party Mode)</h3>
-            
-            <div id="party-setup">
-                <p class="text-sm text-gray-500 mb-4 text-center">開啟房間，分享 ID 給好友，一起投票選餐廳！</p>
-                <input type="text" id="party-room-id" placeholder="輸入或產生房間 ID" class="w-full p-3 rounded-xl bg-gray-100 dark:bg-gray-700 dark:text-white mb-3 text-center tracking-widest font-mono">
-                <div class="grid grid-cols-2 gap-3">
-                    <button onclick="createRoom()" class="theme-bg text-white py-3 rounded-xl font-bold">建立房間</button>
-                    <button onclick="joinRoom()" class="bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 py-3 rounded-xl font-bold">加入房間</button>
-                </div>
-            </div>
-
-            <div id="party-voting" class="hidden text-center">
-                <div class="mb-4">
-                    <span class="text-xs bg-green-100 text-green-600 px-2 py-1 rounded">房間: <span id="current-room-display" class="font-mono"></span></span>
-                </div>
-                <div id="voting-card-area" class="h-48 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center mb-4 relative overflow-hidden">
-                    <h3 id="voting-shop-name" class="text-xl font-bold">載入中...</h3>
-                </div>
-                <div class="flex justify-center gap-6">
-                    <button onclick="vote(false)" class="w-16 h-16 rounded-full bg-red-100 text-red-500 text-2xl flex items-center justify-center border-2 border-red-200"><i class="fa-solid fa-xmark"></i></button>
-                    <button onclick="vote(true)" class="w-16 h-16 rounded-full bg-green-100 text-green-500 text-2xl flex items-center justify-center border-2 border-green-200"><i class="fa-solid fa-check"></i></button>
-                </div>
-            </div>
-            
-            <div id="party-result" class="hidden text-center">
-                <i class="fa-solid fa-champagne-glasses text-4xl text-yellow-500 mb-3"></i>
-                <h3 class="text-lg font-bold mb-2">配對成功！</h3>
-                <p id="match-result-name" class="text-2xl font-black theme-text mb-4"></p>
-                <button onclick="openModalForMatch()" class="w-full theme-bg text-white py-3 rounded-xl">查看詳情</button>
-            </div>
-
-            <button onclick="closeParty()" class="mt-4 w-full text-gray-400 text-sm">關閉</button>
-        </div>
-    </div>
-
     <!-- Result Modal (Standard) -->
     <div id="modal" class="fixed inset-0 bg-black/60 z-[60] hidden flex items-center justify-center p-4 transition-opacity duration-300">
         <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl transform transition-all scale-95 opacity-0 flex flex-col max-h-[90vh]" id="modal-content">
             <div class="relative flex-1 overflow-y-auto scrollbar-hide">
-                <button onclick="closeModal()" class="absolute top-0 right-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 z-10"><i class="fa-solid fa-xmark text-xl"></i></button>
-                
-                <h2 id="modal-shop-name" class="text-xl font-black text-gray-800 dark:text-white mb-1 pr-8 leading-tight">店家名稱</h2>
+                <div class="flex justify-between items-start mb-1">
+                    <h2 id="modal-shop-name" class="text-xl font-black text-gray-800 dark:text-white pr-2 leading-tight">店家名稱</h2>
+                    <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
                 
                 <div class="flex flex-wrap items-center gap-2 mb-3">
                     <span id="modal-shop-rating" class="text-orange-500 font-bold text-sm"></span>
@@ -312,15 +286,22 @@
                     <span id="modal-shop-status" class="text-xs font-bold px-2 py-0.5 rounded border"></span>
                 </div>
                 
+                <!-- Hours -->
                 <div id="modal-hours-container" class="mb-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl text-sm border border-gray-100 dark:border-gray-700">
                     <div class="font-bold mb-1 flex items-center theme-text"><i class="fa-regular fa-clock mr-2"></i> <span id="modal-hours-title">營業時間</span></div>
                     <div id="modal-hours-text" class="pl-6 text-gray-500 dark:text-gray-300">讀取中...</div>
                 </div>
                 
-                <!-- Delivery Links (Uber Only) -->
+                <!-- Quick Actions -->
                 <div class="flex gap-2 mb-4">
-                     <button onclick="searchDelivery('ubereats')" class="w-full py-2 rounded-xl bg-green-500 hover:bg-green-600 text-white text-xs font-bold flex items-center justify-center transition">
-                         <span class="mr-1">🚲</span> 搜 UberEats
+                     <button onclick="openMenuSearch()" class="flex-1 py-2 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 text-xs font-bold flex items-center justify-center transition hover:bg-blue-200">
+                         <span class="mr-1">📖</span> 搜菜單
+                     </button>
+                     <button onclick="searchDelivery('ubereats')" class="flex-1 py-2 rounded-xl bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-xs font-bold flex items-center justify-center transition hover:bg-green-200">
+                         <span class="mr-1">🚲</span> UberEats
+                     </button>
+                     <button onclick="blockShop()" class="w-10 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-400 hover:text-red-500 hover:bg-red-50 transition flex items-center justify-center" title="封鎖此店家">
+                         <i class="fa-solid fa-ban"></i>
                      </button>
                 </div>
 
@@ -355,72 +336,28 @@
     </div>
 
     <script>
-        // --- Robust Config Parser (Fixes JSON Error) ---
-        async function setupFirebase() {
-            const { value: configStr } = await Swal.fire({
-                title: 'Firebase Config',
-                input: 'textarea',
-                inputLabel: '請貼上 Firebase Config (整段 const 或 { ... })',
-                inputPlaceholder: 'const firebaseConfig = { ... }',
-                showCancelButton: true
-            });
-            if(configStr) {
-                try {
-                    let cleanStr = configStr;
-                    // Extract inner object if curly braces exist
-                    if (cleanStr.includes('{')) {
-                        cleanStr = cleanStr.substring(cleanStr.indexOf('{'), cleanStr.lastIndexOf('}') + 1);
-                    }
-                    // Clean up comments and standard formatting
-                    cleanStr = cleanStr.replace(/\/\/.*$/gm, ''); // remove comments
-                    cleanStr = cleanStr.replace(/,\s*}/g, '}'); // remove trailing commas
-                    
-                    // Regex magic to quote unquoted keys
-                    cleanStr = cleanStr.replace(/([a-zA-Z0-9_]+)\s*:/g, '"$1":');
-                    // Convert single quotes to double quotes for values
-                    cleanStr = cleanStr.replace(/'/g, '"');
-
-                    const config = JSON.parse(cleanStr);
-                    localStorage.setItem('firebaseConfig', JSON.stringify(config));
-                    Swal.fire('成功', 'Firebase 設定已儲存，即將重整', 'success').then(() => location.reload());
-                } catch(e) {
-                    console.error("Config Parse Error:", e);
-                    Swal.fire('格式錯誤', '無法解析，請確保複製完整的大括號內容', 'error');
-                }
-            }
-        }
-
-        // --- Theme Manager ---
+        // --- Theme ---
         function applyTheme(color, bgLight) {
             document.documentElement.style.setProperty('--primary', color);
             document.documentElement.style.setProperty('--primary-light', bgLight);
-            localStorage.setItem('themeColor', color);
-            localStorage.setItem('themeBg', bgLight);
+            localStorage.setItem('themeColor', color); localStorage.setItem('themeBg', bgLight);
         }
         function openSettings() { document.getElementById('settings-modal').classList.remove('hidden'); }
         function openThemePicker() { document.getElementById('theme-modal').classList.remove('hidden'); }
         function closeThemePicker() { document.getElementById('theme-modal').classList.add('hidden'); }
-        function changeTheme(c, l) { applyTheme(c, l); }
-        
-        const savedColor = localStorage.getItem('themeColor');
-        const savedBg = localStorage.getItem('themeBg');
+        function changeTheme(c, l) { applyTheme(c, l); } 
+        const savedColor = localStorage.getItem('themeColor'); const savedBg = localStorage.getItem('themeBg');
         if(savedColor) applyTheme(savedColor, savedBg);
 
-        // --- Weather Toggle Logic ---
-        let isWeatherEnabled = localStorage.getItem('isWeatherEnabled') !== 'false';
+        // --- Weather Toggle ---
+        let isWeatherEnabled = localStorage.getItem('isWeatherEnabled') !== 'false'; 
         document.getElementById('weather-toggle').checked = isWeatherEnabled;
+        function toggleWeather() { isWeatherEnabled = document.getElementById('weather-toggle').checked; localStorage.setItem('isWeatherEnabled', isWeatherEnabled); if(currentUserLocation) fetchWeather(currentUserLocation.lat, currentUserLocation.lng); }
 
-        function toggleWeather() {
-            isWeatherEnabled = document.getElementById('weather-toggle').checked;
-            localStorage.setItem('isWeatherEnabled', isWeatherEnabled);
-            const badge = document.getElementById('weather-badge');
-            if(isWeatherEnabled && currentUserLocation) fetchWeather(currentUserLocation.lat, currentUserLocation.lng);
-            else badge.classList.add('hidden');
-        }
-
-        // --- Global Variables ---
+        // --- Global ---
         let map, placesService;
         let currentUserLocation = null;
+        let gpsWatchId = null; // For Live GPS
         let allFetchedShops = [];
         let displayedShops = [];
         let currentMode = 'restaurant';
@@ -431,48 +368,55 @@
         let onlyOpenNow = false;
         let selectedBudget = 0; 
         let myFavorites = JSON.parse(localStorage.getItem('myFavorites')) || [];
+        let myBlacklist = JSON.parse(localStorage.getItem('myBlacklist')) || [];
         let apiKey = localStorage.getItem('googleMapsApiKey') || '';
-        let firebaseConfig = JSON.parse(localStorage.getItem('firebaseConfig')) || null;
         let apiCache = JSON.parse(sessionStorage.getItem('apiCache')) || {}; 
         let scriptLoaded = false;
-        
-        // Slot Machine
-        let slotStrip = document.getElementById('slot-strip');
         let isSpinning = false;
 
         document.getElementById('date-display').innerText = new Date().toLocaleDateString('zh-TW', { month: 'long', day: 'numeric', weekday: 'short' });
-        
-        if(!apiKey) document.getElementById('api-status').classList.remove('hidden');
-        else loadGoogleMapsScript();
+        if(!apiKey) document.getElementById('api-status').classList.remove('hidden'); else loadGoogleMapsScript();
+
+        // --- Marquee Logic ---
+        function updateMarquee() {
+            const h = new Date().getHours();
+            const mq = document.getElementById('marquee-text');
+            let msg = "👋 Hi 吃貨，今天想吃點什麼呢？";
+            if(h >= 6 && h < 11) msg = "☀️ 早安！來份元氣早餐開啟美好一天吧！";
+            else if(h >= 11 && h < 14) msg = "🍽️ 午餐時間到！肚子餓了嗎？看看附近有什麼好料！";
+            else if(h >= 14 && h < 17) msg = "🍰 下午茶時光～ 來杯咖啡配甜點如何？";
+            else if(h >= 17 && h < 21) msg = "🌙 晚餐吃什麼？犒賞自己一頓豐盛的吧！";
+            else if(h >= 21 || h < 4) msg = "🦉 深夜食堂開啟... 罪惡的宵夜在呼喚你！";
+            
+            // Random recommendation injection
+            if(displayedShops.length > 0) {
+                const rand = displayedShops[Math.floor(Math.random()*displayedShops.length)];
+                msg += ` 💡 推薦你試試：${rand.name}`;
+            }
+            mq.innerText = msg;
+        }
+        setInterval(updateMarquee, 30000); // Update every 30s
+        updateMarquee();
 
         // --- Distance & Weather ---
         const distRange = document.getElementById('distance-range');
         const rangeVal = document.getElementById('range-value');
-        distRange.addEventListener('input', (e) => {
-            currentRadius = parseInt(e.target.value);
-            rangeVal.innerText = currentRadius >= 1000 ? (currentRadius/1000) + " km" : currentRadius + " m";
-        });
+        distRange.addEventListener('input', (e) => { currentRadius = parseInt(e.target.value); rangeVal.innerText = currentRadius >= 1000 ? (currentRadius/1000) + " km" : currentRadius + " m"; });
         distRange.addEventListener('change', () => { if(currentUserLocation) refreshSearch(); });
 
         async function fetchWeather(lat, lng) {
             const badge = document.getElementById('weather-badge');
-            if(!isWeatherEnabled) return;
+            if(!isWeatherEnabled) { badge.classList.add('hidden'); return; }
             try {
                 const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`);
                 const data = await res.json();
                 const code = data.current_weather.weathercode;
                 let icon = 'cloud'; let text = '多雲';
-                if (code <= 1) { icon = 'sun'; text = '晴天'; }
-                else if (code <= 3) { icon = 'cloud-sun'; text = '多雲'; }
-                else if (code <= 67) { icon = 'cloud-rain'; text = '有雨'; }
-                else if (code > 80) { icon = 'bolt'; text = '雷雨'; }
-                
-                badge.innerHTML = `<i class="fa-solid fa-${icon}"></i> ${text}`;
-                badge.classList.remove('hidden');
+                if (code <= 1) { icon = 'sun'; text = '晴天'; } else if (code <= 3) { icon = 'cloud-sun'; text = '多雲'; } else if (code <= 67) { icon = 'cloud-rain'; text = '有雨'; } else if (code > 80) { icon = 'bolt'; text = '雷雨'; }
+                badge.innerHTML = `<i class="fa-solid fa-${icon}"></i> ${text}`; badge.classList.remove('hidden');
             } catch(e) { console.error("Weather error", e); badge.classList.add('hidden'); }
         }
 
-        // --- API & Cache ---
         async function openApiKeySettings() {
             const { value: key } = await Swal.fire({ title: '設定 API Key', input: 'text', inputValue: apiKey, showCancelButton: true });
             if (key) { apiKey = key; localStorage.setItem('googleMapsApiKey', apiKey); location.reload(); }
@@ -486,32 +430,46 @@
             document.head.appendChild(script);
         }
 
-        // --- Core Search ---
-        function getLocation() {
+        // --- Core Search & Live GPS ---
+        function initLocation() {
             if (!apiKey) { openApiKeySettings(); return; }
             if (!navigator.geolocation) { Swal.fire('錯誤', '不支援定位', 'error'); return; }
+            const mapDiv = document.createElement('div'); map = new google.maps.Map(mapDiv, { center: {lat:0, lng:0}, zoom: 15 }); placesService = new google.maps.places.PlacesService(map);
             
-            const mapDiv = document.createElement('div'); 
-            map = new google.maps.Map(mapDiv, { center: {lat:0, lng:0}, zoom: 15 });
-            placesService = new google.maps.places.PlacesService(map);
-
             document.getElementById('start-screen').classList.add('hidden');
             document.getElementById('loading-screen').classList.remove('hidden');
 
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    currentUserLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                    fetchWeather(currentUserLocation.lat, currentUserLocation.lng);
-                    fetchShops();
-                },
-                () => { document.getElementById('loading-screen').classList.add('hidden'); document.getElementById('start-screen').classList.remove('hidden'); }
-            );
+            // Initial Fetch
+            navigator.geolocation.getCurrentPosition((pos) => {
+                currentUserLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                fetchWeather(currentUserLocation.lat, currentUserLocation.lng);
+                fetchShops();
+                startLiveTracking(); // Start Tracking
+            }, () => { document.getElementById('loading-screen').classList.add('hidden'); document.getElementById('start-screen').classList.remove('hidden'); });
         }
 
-        function refreshSearch(force = false) {
-            if (force) apiCache = {}; 
-            if(!currentUserLocation) getLocation(); else fetchShops();
+        function startLiveTracking() {
+            if (gpsWatchId) navigator.geolocation.clearWatch(gpsWatchId);
+            document.getElementById('gps-indicator').classList.remove('hidden');
+            gpsWatchId = navigator.geolocation.watchPosition((pos) => {
+                currentUserLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                // Update Distances in real-time without re-fetching API
+                updateDistancesUI(); 
+            }, (e) => console.log('GPS Error', e), { enableHighAccuracy: true });
         }
+
+        function updateDistancesUI() {
+            // Recalculate and update text in list view
+            document.querySelectorAll('.distance-display').forEach(el => {
+                const lat = parseFloat(el.dataset.lat);
+                const lng = parseFloat(el.dataset.lng);
+                const dist = calculateDistance(currentUserLocation.lat, currentUserLocation.lng, lat, lng);
+                const txt = dist < 1000 ? `${Math.round(dist)} m` : `${(dist/1000).toFixed(1)} km`;
+                el.innerHTML = `<i class="fa-solid fa-location-dot theme-text"></i> ${txt}`;
+            });
+        }
+
+        function refreshSearch(force = false) { if (force) apiCache = {}; if(!currentUserLocation) initLocation(); else fetchShops(); }
 
         function fetchShops() {
             document.getElementById('loading-screen').classList.remove('hidden');
@@ -527,31 +485,15 @@
                 return;
             }
 
-            let request = {
-                location: currentUserLocation,
-                radius: currentRadius,
-                type: 'restaurant' 
-            };
-
-            // Enhanced Keywords
-            if (currentMode === 'date') {
-                delete request.type;
-                request.keyword = '咖啡廳 OR 甜點 OR 下午茶 OR 蛋糕';
-            } else if (currentMode === 'custom') {
-                request.keyword = currentCustomKeyword;
-                delete request.type;
-            } else if (currentMode === 'restaurant') {
+            let request = { location: currentUserLocation, radius: currentRadius, type: 'restaurant' };
+            if (currentMode === 'date') { delete request.type; request.keyword = '咖啡廳 OR 甜點 OR 下午茶 OR 蛋糕'; } 
+            else if (currentMode === 'custom') { request.keyword = currentCustomKeyword; delete request.type; } 
+            else if (currentMode === 'restaurant') {
                 if (subCategory && subCategory !== 'all') {
                     if (subCategory === '日式料理') request.keyword = '日式料理 OR 壽司 OR 拉麵';
                     else if (subCategory === '韓式料理') request.keyword = '韓式料理 OR 韓式烤肉 OR 泡菜';
-                    else if (subCategory === '手搖') {
-                        delete request.type; 
-                        request.keyword = '手搖飲料 OR 珍珠奶茶 OR 飲料店';
-                    }
-                    else if (subCategory === '牛排') {
-                        delete request.type;
-                        request.keyword = '牛排 OR 鐵板牛排 OR Steak';
-                    }
+                    else if (subCategory === '手搖') { delete request.type; request.keyword = '手搖飲料 OR 珍珠奶茶 OR 飲料店'; }
+                    else if (subCategory === '牛排') { delete request.type; request.keyword = '牛排 OR Steak'; } 
                     else request.keyword = subCategory;
                 }
             }
@@ -572,33 +514,18 @@
 
         function processAndRenderShops() {
             let filtered = allFetchedShops.filter(shop => {
-                // 1. Open Now
-                if (onlyOpenNow) {
-                    if (!shop.opening_hours || !shop.opening_hours.open_now) return false;
-                }
-                // 2. Budget
-                if (selectedBudget > 0) {
-                    if (!shop.price_level || shop.price_level > selectedBudget) return false;
-                }
+                if (myBlacklist.includes(shop.place_id)) return false; // Blacklist Filter
+                if (onlyOpenNow && shop.opening_hours && !shop.opening_hours.open_now) return false;
+                if (selectedBudget > 0 && (!shop.price_level || shop.price_level > selectedBudget)) return false;
                 
-                // 3. Strict Logic
                 if (currentMode === 'restaurant') {
                     const name = shop.name.toLowerCase();
-                    // Steak Logic (Refined for v13)
-                    if (subCategory === '牛排') {
-                        // Must have steak related keywords
-                        if (!name.includes('牛排') && !name.includes('steak') && !name.includes('鐵板')) return false;
-                        // Exclude generic bento/noodle places that might serve a steak side dish
-                        if (name.includes('便當') || name.includes('麵')) return false;
-                    }
-                    // Bubble Tea Logic (Refined for v13)
+                    if (subCategory === '牛排' && (name.includes('麵') || name.includes('飯') || name.includes('便當'))) return false;
                     if (subCategory === '手搖') {
                         const badKeywords = ['starbucks', 'louisa', 'cama', 'coffee', '咖啡', '伯朗'];
-                        const goodKeywords = ['茶', '飲', '凍', '吸', 'tea', 'beverage', '50嵐', 'coco', '清心', '可不可'];
+                        const goodKeywords = ['茶', '飲', '凍', '吸', 'tea', 'beverage', '50嵐', 'coco', '清心'];
                         if (badKeywords.some(bad => name.includes(bad))) return false;
-                        if (shop.types.includes('cafe')) {
-                            if (!goodKeywords.some(good => name.includes(good))) return false;
-                        }
+                        if (shop.types.includes('cafe') && !goodKeywords.some(good => name.includes(good))) return false;
                     }
                 }
                 return true;
@@ -614,14 +541,14 @@
 
             filtered.sort(() => 0.5 - Math.random());
             displayedShops = filtered.slice(0, 20);
+            updateMarquee(); // Update Marquee content
             renderUI();
         }
 
         function renderUI() {
             document.getElementById('loading-screen').classList.add('hidden');
             const list = document.getElementById('results-list');
-            list.classList.remove('hidden');
-            list.innerHTML = '';
+            list.classList.remove('hidden'); list.innerHTML = '';
             document.getElementById('fab-container').classList.remove('hidden');
 
             const infoDiv = document.createElement('div');
@@ -629,10 +556,7 @@
             infoDiv.innerHTML = `<span>隨機精選 ${displayedShops.length} 家</span> <span>Google Data</span>`;
             list.appendChild(infoDiv);
 
-            if(displayedShops.length === 0) {
-                list.innerHTML += `<div class="text-center mt-10 text-gray-400 dark:text-gray-500">沒有符合條件的店家</div>`;
-                return;
-            }
+            if(displayedShops.length === 0) { list.innerHTML += `<div class="text-center mt-10 text-gray-400 dark:text-gray-500">沒有符合條件的店家</div>`; return; }
 
             displayedShops.forEach((shop, index) => {
                 const card = document.createElement('div');
@@ -640,122 +564,86 @@
                 card.className = 'bg-white dark:bg-gray-800 p-3 rounded-2xl shadow-sm mx-4 mb-3 flex items-start gap-3 cursor-pointer border border-gray-100 dark:border-gray-700 hover:border-blue-300 relative card-anim animate-fade-in-up opacity-0';
                 
                 let photoUrl = 'https://via.placeholder.com/80?text=Food';
-                if (shop.photos && shop.photos.length > 0) photoUrl = shop.photos[0].getUrl({maxWidth:200, maxHeight:200});
-                else if (shop.icon) photoUrl = shop.icon;
-
+                if (shop.photos && shop.photos.length > 0) photoUrl = shop.photos[0].getUrl({maxWidth:200, maxHeight:200}); else if (shop.icon) photoUrl = shop.icon;
                 const rating = shop.rating ? `<span class="text-orange-400 font-bold text-xs"><i class="fa-solid fa-star"></i> ${shop.rating}</span>` : '<span class="text-xs text-gray-400">無評分</span>';
-                
-                let typeIcon = '';
-                if(subCategory === '手搖') typeIcon = '🥤 ';
-                else if(subCategory === '日式料理' || shop.name.includes('壽司')) typeIcon = '🍱 ';
-                else if(subCategory === '牛排') typeIcon = '🥩 ';
-                else if(subCategory === '小吃') typeIcon = '🍢 ';
+                let typeIcon = ''; if(subCategory === '手搖') typeIcon = '🥤 '; else if(subCategory === '牛排') typeIcon = '🥩 ';
                 
                 const isOpen = shop.opening_hours ? shop.opening_hours.open_now : null;
                 const statusColor = isOpen === true ? 'bg-green-500' : (isOpen === false ? 'bg-red-500' : 'bg-gray-400');
                 let favHtml = shop.isFav ? `<i class="fa-solid fa-heart theme-text absolute top-3 right-3 text-lg drop-shadow-sm"></i>` : '';
                 
                 card.innerHTML = `
-                    <div class="relative">
-                        <img src="${photoUrl}" class="photo-thumb bg-gray-100 dark:bg-gray-700 flex-shrink-0">
-                        <div class="absolute bottom-1 right-1 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${statusColor}"></div>
-                    </div>
+                    <div class="relative"><img src="${photoUrl}" class="photo-thumb bg-gray-100 dark:bg-gray-700 flex-shrink-0"><div class="absolute bottom-1 right-1 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${statusColor}"></div></div>
                     <div class="flex-1 min-w-0 pt-0.5">
-                        <div class="flex justify-between items-start mb-0.5 pr-6">
-                             <h3 class="font-bold text-gray-800 dark:text-gray-100 truncate text-sm leading-tight">${typeIcon}${shop.name}</h3>
-                        </div>
-                        <div class="flex items-center mb-1 gap-2">
-                            ${rating}
-                            <span class="text-xs text-gray-500 dark:text-gray-400">${shop.priceSymbol}</span>
-                        </div>
-                         <p class="text-xs text-gray-500 dark:text-gray-400 truncate"><i class="fa-solid fa-location-dot theme-text"></i> ${shop.distanceText} • ${shop.vicinity || ''}</p>
+                        <div class="flex justify-between items-start mb-0.5 pr-6"><h3 class="font-bold text-gray-800 dark:text-gray-100 truncate text-sm leading-tight">${typeIcon}${shop.name}</h3></div>
+                        <div class="flex items-center mb-1 gap-2">${rating}<span class="text-xs text-gray-500 dark:text-gray-400">${shop.priceSymbol}</span></div>
+                         <p class="text-xs text-gray-500 dark:text-gray-400 truncate distance-display" data-lat="${shop.geometry.location.lat()}" data-lng="${shop.geometry.location.lng()}"><i class="fa-solid fa-location-dot theme-text"></i> ${shop.distanceText} • ${shop.vicinity || ''}</p>
                     </div>
                     ${favHtml}
                 `;
-                card.onclick = () => { selectedShop = shop; openModal(); };
-                list.appendChild(card);
+                card.onclick = () => { selectedShop = shop; openModal(); }; list.appendChild(card);
             });
             const spacer = document.createElement('div'); spacer.className = 'h-24'; list.appendChild(spacer);
         }
 
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371e3; const φ1 = lat1 * Math.PI/180; const φ2 = lat2 * Math.PI/180;
-            const Δφ = (lat2-lat1) * Math.PI/180; const Δλ = (lon2-lon1) * Math.PI/180;
-            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        }
-
-        // --- Controls ---
+        function calculateDistance(lat1, lon1, lat2, lon2) { const R = 6371e3; const φ1 = lat1 * Math.PI/180; const φ2 = lat2 * Math.PI/180; const Δφ = (lat2-lat1) * Math.PI/180; const Δλ = (lon2-lon1) * Math.PI/180; const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2); return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); }
         function toggleBudgetFilter() { document.getElementById('budget-dropdown').classList.toggle('hidden'); }
-        function setBudget(level) {
-            selectedBudget = level;
-            document.querySelectorAll('.budget-chip').forEach((el, idx) => { if (idx === level) el.classList.add('active'); else el.classList.remove('active'); });
-            document.getElementById('btn-budget').innerHTML = `預算 ${level===0?'': '$'.repeat(level)} <i class="fa-solid fa-chevron-down ml-1"></i>`;
-            if(allFetchedShops.length > 0) processAndRenderShops();
-        }
-        function toggleOpenNow() {
-            onlyOpenNow = document.getElementById('open-now-toggle').checked;
-            if(allFetchedShops.length > 0) processAndRenderShops();
-        }
+        function setBudget(level) { selectedBudget = level; document.querySelectorAll('.budget-chip').forEach((el, idx) => { if (idx === level) el.classList.add('active'); else el.classList.remove('active'); }); document.getElementById('btn-budget').innerHTML = `預算 ${level===0?'': '$'.repeat(level)} <i class="fa-solid fa-chevron-down ml-1"></i>`; if(allFetchedShops.length > 0) processAndRenderShops(); }
+        function toggleOpenNow() { onlyOpenNow = document.getElementById('open-now-toggle').checked; if(allFetchedShops.length > 0) processAndRenderShops(); }
 
-        // --- Standard Logic (Modal, Wheel, Party) ---
+        // --- Standard Logic ---
         function setMode(mode) {
-            currentMode = mode;
-            document.getElementById('keyword-badge').classList.add('hidden');
+            currentMode = mode; document.getElementById('keyword-badge').classList.add('hidden');
             document.querySelectorAll('.filter-btn').forEach(btn => { btn.className = "filter-btn px-4 py-2 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 transition transform active:scale-95"; });
             if (mode !== 'custom') { document.getElementById(`btn-${mode}`).className = "filter-btn theme-bg px-4 py-2 rounded-xl text-sm font-bold shadow-md transition transform active:scale-95"; }
             if (mode === 'restaurant') { document.getElementById('sub-categories').classList.remove('hidden'); } else { document.getElementById('sub-categories').classList.add('hidden'); subCategory = 'all'; }
-            if (currentUserLocation) refreshSearch(); else getLocation();
+            if (currentUserLocation) refreshSearch(); else initLocation();
         }
-        function setSubCategory(cat) {
-            subCategory = cat;
-            const chips = document.getElementById('sub-categories').querySelectorAll('button');
-            chips.forEach(c => c.classList.remove('active'));
-            if(cat === 'all') document.getElementById('chip-all').classList.add('active');
-            else if(cat === '手搖') document.getElementById('chip-drink').classList.add('active');
-            else if(cat === '小吃') document.getElementById('chip-snack').classList.add('active');
-            else if(cat === '牛排') document.getElementById('chip-steak').classList.add('active');
-            else if(cat === '日式料理') document.getElementById('chip-jp').classList.add('active');
-            else if(cat === '韓式料理') document.getElementById('chip-kr').classList.add('active');
-            else if(cat === '火鍋') document.getElementById('chip-hotpot').classList.add('active');
-            else if(cat === '炸物') document.getElementById('chip-fried').classList.add('active');
-            else if(cat === '居酒屋') document.getElementById('chip-izakaya').classList.add('active');
-            refreshSearch();
-        }
-        async function askCustomSearch() {
-            const { value: keyword } = await Swal.fire({ title: '想吃什麼？', input: 'text', showCancelButton: true });
-            if (keyword) {
-                currentCustomKeyword = keyword; currentMode = 'custom';
-                document.getElementById('sub-categories').classList.add('hidden');
-                document.querySelectorAll('.filter-btn').forEach(btn => btn.className = "filter-btn px-4 py-2 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 transition");
-                document.getElementById('btn-custom').className = "filter-btn theme-bg px-4 py-2 rounded-xl text-sm font-bold shadow-md transition";
-                document.getElementById('keyword-badge').classList.remove('hidden');
-                document.getElementById('current-keyword-text').innerText = keyword;
-                if(!currentUserLocation) getLocation(); else refreshSearch();
-            }
-        }
+        function setSubCategory(cat) { subCategory = cat; const chips = document.getElementById('sub-categories').querySelectorAll('button'); chips.forEach(c => c.classList.remove('active')); if(cat === 'all') document.getElementById('chip-all').classList.add('active'); else if(cat === '手搖') document.getElementById('chip-drink').classList.add('active'); else if(cat === '小吃') document.getElementById('chip-snack').classList.add('active'); else if(cat === '牛排') document.getElementById('chip-steak').classList.add('active'); else if(cat === '日式料理') document.getElementById('chip-jp').classList.add('active'); else if(cat === '韓式料理') document.getElementById('chip-kr').classList.add('active'); else if(cat === '火鍋') document.getElementById('chip-hotpot').classList.add('active'); else if(cat === '炸物') document.getElementById('chip-fried').classList.add('active'); else if(cat === '居酒屋') document.getElementById('chip-izakaya').classList.add('active'); refreshSearch(); }
+        async function askCustomSearch() { const { value: keyword } = await Swal.fire({ title: '想吃什麼？', input: 'text', showCancelButton: true }); if (keyword) { currentCustomKeyword = keyword; currentMode = 'custom'; document.getElementById('sub-categories').classList.add('hidden'); document.querySelectorAll('.filter-btn').forEach(btn => btn.className = "filter-btn px-4 py-2 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 transition"); document.getElementById('btn-custom').className = "filter-btn theme-bg px-4 py-2 rounded-xl text-sm font-bold shadow-md transition"; document.getElementById('keyword-badge').classList.remove('hidden'); document.getElementById('current-keyword-text').innerText = keyword; if(!currentUserLocation) initLocation(); else refreshSearch(); } }
         function openSlotMachine() { if(displayedShops.length === 0) return; document.getElementById('slot-modal').classList.remove('hidden'); const strip = document.getElementById('slot-strip'); strip.innerHTML = ''; const list = [...displayedShops, ...displayedShops, ...displayedShops]; list.forEach(s => { const div = document.createElement('div'); div.className = 'slot-item font-bold text-gray-800'; div.innerText = s.name.substring(0, 6); strip.appendChild(div); }); strip.style.transform = 'translateY(0px)'; document.getElementById('slot-msg').innerText = "拉動拉桿來決定！"; }
         function spinSlot() { if(isSpinning) return; isSpinning = true; document.getElementById('slot-msg').innerText = "運氣旋轉中..."; const strip = document.getElementById('slot-strip'); const winnerIdx = Math.floor(Math.random() * displayedShops.length); const itemHeight = 100; const targetY = -((displayedShops.length * itemHeight) + (winnerIdx * itemHeight)); strip.style.transition = 'transform 3s cubic-bezier(0.25, 1, 0.5, 1)'; strip.style.transform = `translateY(${targetY}px)`; setTimeout(() => { isSpinning = false; selectedShop = displayedShops[winnerIdx]; closeSlot(); openModal(); }, 3500); }
         function closeSlot() { document.getElementById('slot-modal').classList.add('hidden'); }
+        
+        // --- Modal & Detail ---
         function openModal() {
             if(!selectedShop) return;
             document.getElementById('modal-shop-name').innerText = selectedShop.name;
             document.getElementById('modal-shop-vicinity').innerText = selectedShop.vicinity || '';
             document.getElementById('modal-shop-rating').innerHTML = selectedShop.rating ? `<i class="fa-solid fa-star"></i> ${selectedShop.rating}` : '';
             document.getElementById('modal-shop-price').innerText = selectedShop.priceSymbol ? ' • ' + selectedShop.priceSymbol : '';
+            
             const statusEl = document.getElementById('modal-shop-status');
-            const isOpen = selectedShop.opening_hours ? selectedShop.opening_hours.open_now : null;
-            if(isOpen) { statusEl.innerText = "營業中"; statusEl.className = "text-xs font-bold px-2 py-0.5 rounded border border-green-200 bg-green-50 text-green-600 dark:bg-green-900 dark:text-green-300 dark:border-green-800"; }
-            else if (isOpen === false) { statusEl.innerText = "休息中"; statusEl.className = "text-xs font-bold px-2 py-0.5 rounded border border-red-200 bg-red-50 text-red-600 dark:bg-red-900 dark:text-red-300 dark:border-red-800"; }
-            else { statusEl.innerText = "時間未知"; statusEl.className = "text-xs text-gray-400"; }
+            statusEl.innerText = "讀取中..."; statusEl.className = "text-xs font-bold px-2 py-0.5 rounded border border-gray-200 bg-gray-50 text-gray-500";
+
             updateFavBtnState(); fetchDetailedHours(selectedShop.place_id);
             const mapEl = document.getElementById('mini-map'); const loc = selectedShop.geometry.location; const miniMap = new google.maps.Map(mapEl, { center: loc, zoom: 16, disableDefaultUI: true }); new google.maps.Marker({ position: loc, map: miniMap });
             document.getElementById('modal').classList.remove('hidden'); setTimeout(() => document.getElementById('modal-content').classList.remove('scale-95', 'opacity-0'), 10);
         }
-        function fetchDetailedHours(placeId) { document.getElementById('modal-hours-text').innerText = "讀取中..."; placesService.getDetails({ placeId: placeId, fields: ['opening_hours'] }, (place, status) => { if (status === google.maps.places.PlacesServiceStatus.OK && place.opening_hours) { const days = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六']; const todayDay = days[new Date().getDay()]; if(place.opening_hours.weekday_text) { const todayText = place.opening_hours.weekday_text.find(t => t.startsWith(todayDay)); if(todayText) { const timeStr = todayText.split(': ')[1] || todayText; const isOpen = place.opening_hours.isOpen(); document.getElementById('modal-hours-text').innerHTML = `<span class="${isOpen ? 'text-green-600 dark:text-green-400':'text-red-500 dark:text-red-400'} font-bold mr-2">${isOpen?'營業中':'休息中'}</span> ${timeStr}`; } else { document.getElementById('modal-hours-text').innerText = "今日無營業資訊"; } } } else { document.getElementById('modal-hours-text').innerText = "無法取得詳細時段"; } }); }
+
+        function fetchDetailedHours(placeId) { 
+            document.getElementById('modal-hours-text').innerText = "讀取中..."; 
+            placesService.getDetails({ placeId: placeId, fields: ['opening_hours', 'utc_offset_minutes'] }, (place, status) => { 
+                if (status === google.maps.places.PlacesServiceStatus.OK && place.opening_hours) { 
+                    const isOpenNow = place.opening_hours.isOpen();
+                    const statusEl = document.getElementById('modal-shop-status');
+                    if(isOpenNow) { statusEl.innerText = "營業中"; statusEl.className = "text-xs font-bold px-2 py-0.5 rounded border border-green-200 bg-green-50 text-green-600 dark:bg-green-900 dark:text-green-300 dark:border-green-800"; } 
+                    else { statusEl.innerText = "休息中"; statusEl.className = "text-xs font-bold px-2 py-0.5 rounded border border-red-200 bg-red-50 text-red-600 dark:bg-red-900 dark:text-red-300 dark:border-red-800"; }
+                    const days = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六']; 
+                    const todayDay = days[new Date().getDay()]; 
+                    if(place.opening_hours.weekday_text) { 
+                        const todayText = place.opening_hours.weekday_text.find(t => t.startsWith(todayDay)); 
+                        if(todayText) { const timeStr = todayText.split(': ')[1] || todayText; document.getElementById('modal-hours-text').innerHTML = `<span class="${isOpenNow ? 'text-green-600 dark:text-green-400':'text-red-500 dark:text-red-400'} font-bold mr-2">${isOpenNow?'營業中':'休息中'}</span> ${timeStr}`; } 
+                        else { document.getElementById('modal-hours-text').innerText = "今日無營業資訊"; } 
+                    } 
+                } else { document.getElementById('modal-hours-text').innerText = "無法取得詳細時段"; document.getElementById('modal-shop-status').innerText = "狀態未知"; } 
+            }); 
+        }
+
         function closeModal() { document.getElementById('modal-content').classList.add('scale-95', 'opacity-0'); setTimeout(() => document.getElementById('modal').classList.add('hidden'), 200); }
         function openGoogleMapsNav() { window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedShop.name)}&query_place_id=${selectedShop.place_id}`, '_blank'); }
         function searchDelivery(platform) { const name = encodeURIComponent(selectedShop.name); let url = `https://www.ubereats.com/tw/search?q=${name}`; window.open(url, '_blank'); }
+        function openMenuSearch() { const name = encodeURIComponent(selectedShop.name); window.open(`https://www.google.com/search?q=${name}+菜單&tbm=isch`, '_blank'); }
         function showError(t) { document.getElementById('loading-screen').classList.add('hidden'); document.getElementById('results-list').classList.remove('hidden'); document.getElementById('results-list').innerHTML = `<div class="text-center mt-10 text-gray-400">${t}</div>`; }
         function updateFavBtnState() { const btn = document.getElementById('btn-toggle-fav'); const isFav = myFavorites.some(f => f.place_id === selectedShop.place_id); if(isFav) { btn.innerHTML = `<i class="fa-solid fa-heart theme-text mr-1"></i> 已在最愛`; btn.classList.add('theme-bg-light', 'theme-border'); } else { btn.innerHTML = `<i class="fa-regular fa-heart mr-1"></i> 加入最愛`; btn.classList.remove('theme-bg-light', 'theme-border'); } }
         function toggleFavorite() { const idx = myFavorites.findIndex(f => f.place_id === selectedShop.place_id); if (idx >= 0) { myFavorites.splice(idx, 1); Swal.fire({ icon: 'success', title: '已移除', timer: 800, showConfirmButton: false }); } else { myFavorites.unshift({ place_id: selectedShop.place_id, name: selectedShop.name, vicinity: selectedShop.vicinity, rating: 0 }); Swal.fire({ icon: 'success', title: '已加入最愛！', timer: 800, showConfirmButton: false }); } localStorage.setItem('myFavorites', JSON.stringify(myFavorites)); updateFavBtnState(); if(currentUserLocation) processAndRenderShops(); }
@@ -765,8 +653,21 @@
         function closeFavorites() { document.getElementById('fav-modal').classList.add('translate-y-full'); setTimeout(()=>document.getElementById('fav-modal').classList.add('hidden'), 300); }
         function clearFavorites() { if(confirm("清空？")) { myFavorites=[]; localStorage.setItem('myFavorites','[]'); openFavorites(); processAndRenderShops(); } }
         function shareShop() { const t = `今天吃: ${selectedShop.name} https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedShop.name)}`; navigator.clipboard.writeText(t).then(()=>Swal.fire({ icon:'success', title:'已複製', timer:800, showConfirmButton:false })); }
-        function openPartyMode() { if(!firebaseConfig) { Swal.fire('功能未啟用', '請先在設定中輸入 Firebase Config', 'info'); return; } document.getElementById('party-modal').classList.remove('hidden'); }
-        function closeParty() { document.getElementById('party-modal').classList.add('hidden'); }
+        
+        // --- Blacklist ---
+        function blockShop() {
+            if(!selectedShop) return;
+            Swal.fire({ title: '封鎖此店家?', text: "之後隨機推薦將不再出現", icon: 'warning', showCancelButton: true, confirmButtonText: '封鎖' }).then((r) => {
+                if(r.isConfirmed) {
+                    myBlacklist.push(selectedShop.place_id);
+                    localStorage.setItem('myBlacklist', JSON.stringify(myBlacklist));
+                    closeModal();
+                    processAndRenderShops(); // Refresh list to remove it
+                    Swal.fire('已封鎖', '', 'success');
+                }
+            });
+        }
+        function clearBlacklist() { if(confirm("確定要重設所有黑名單嗎？")) { myBlacklist=[]; localStorage.setItem('myBlacklist','[]'); alert('黑名單已清空'); refreshSearch(); } }
     </script>
 </body>
 </html>
